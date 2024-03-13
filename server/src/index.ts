@@ -29,9 +29,12 @@ const generateRoomCode = (): string => {
 
 wss.on("connection", (ws: WebSocket) => {
   ws.on("message", (msg: WebSocket.Data) => {
-    const data: { type: string; room?: string; username?: string } = JSON.parse(
-      msg.toString()
-    );
+    const data: {
+      type: string;
+      room?: string;
+      username?: string;
+      text?: string;
+    } = JSON.parse(msg.toString());
 
     if (data.type === "join") {
       if (data.room) {
@@ -45,7 +48,7 @@ wss.on("connection", (ws: WebSocket) => {
         rooms[room].clients.push(ws);
         sendToRoom(room, {
           type: "message",
-          text: `${data.username} joined the room}`,
+          text: `${data.username} joined the room`,
         });
       } else {
         // Create New Room
@@ -58,19 +61,39 @@ wss.on("connection", (ws: WebSocket) => {
         clients.push({ ws, code });
         ws.send(JSON.stringify({ type: "roomCode", roomCode: code }));
       }
+    } else if (data.type === "message") {
+      if (data.room && data.text) {
+        console.log("sending");
+
+        const room: string = data.room;
+        const username: string = data.username || "unknown";
+
+        sendToRoom(
+          room,
+          {
+            type: "message",
+            username: username,
+            text: data.text,
+          },
+          ws
+        );
+      }
     }
   });
 });
 
 const sendToRoom = (
   room: string,
-  message: { type: string; text: string }
-): void => {
+  message: { type: string; text: string; username?: string },
+  authorWs?: WebSocket
+) => {
   const roomClients: Room | undefined = rooms[room];
 
   if (roomClients) {
     roomClients.clients.forEach((client: WebSocket) => {
-      client.send(JSON.stringify(message));
+      if (client !== authorWs) {
+        client.send(JSON.stringify(message));
+      }
     });
   }
 };

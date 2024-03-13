@@ -4,10 +4,15 @@ import "./App.css";
 
 const ws = new WebSocket("ws://localhost:8080");
 
+interface message {
+  username?: string;
+  text: string;
+}
+
 const App: React.FC = () => {
   const [wsError, setWsError] = useState<boolean>(false);
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<message[]>([]);
   const [username, setUsername] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [room, setRoom] = useState("");
@@ -25,7 +30,11 @@ const App: React.FC = () => {
       console.log(data);
 
       if (data.type === "message") {
-        setMessages((prevMessages) => [...prevMessages, data.text]);
+        console.table(data);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { username: data.username, text: data.text },
+        ]);
       } else if (data.type === "roomCode") {
         setRoom(data.roomCode);
         setMessages([]);
@@ -56,6 +65,27 @@ const App: React.FC = () => {
     setRoom(roomCode);
     setRoomCode("");
     setMessages([]);
+  };
+
+  const sendMessage = () => {
+    if (message.trim() == "") {
+      alert("Please enter message");
+      return;
+    }
+
+    ws.send(
+      JSON.stringify({
+        type: "message",
+        text: message,
+        username: username,
+        room: room,
+      })
+    );
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { username: username, text: message },
+    ]);
+    setMessage("");
   };
 
   return (
@@ -93,7 +123,26 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {room && !wsError && <h1>Room {room}</h1>}
+      {room && !wsError && (
+        <>
+          <h1>Room {room}</h1>
+          <ul>
+            {messages.map((message: message, index: number) => (
+              <li key={index}>
+                {message.username ? `[${message.username}]: ` : ""}{" "}
+                {message.text}
+              </li>
+            ))}
+          </ul>
+          <input
+            type="text"
+            placeholder="Text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+          <button onClick={sendMessage}>Send</button>
+        </>
+      )}
     </div>
   );
 };
