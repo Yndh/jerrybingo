@@ -63,8 +63,6 @@ wss.on("connection", (ws: WebSocket) => {
       }
     } else if (data.type === "message") {
       if (data.room && data.text) {
-        console.log("sending");
-
         const room: string = data.room;
         const username: string = data.username || "unknown";
 
