@@ -5,6 +5,7 @@ import "./App.css";
 const ws = new WebSocket("ws://localhost:8080");
 
 const App: React.FC = () => {
+  const [wsError, setWsError] = useState<boolean>(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<string[]>([]);
   const [username, setUsername] = useState("");
@@ -14,6 +15,10 @@ const App: React.FC = () => {
   const [createdRoom, setCreatedRoom] = useState<boolean>(false);
 
   useEffect(() => {
+    ws.onopen = () => {
+      setWsError(false);
+    };
+
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
@@ -31,6 +36,7 @@ const App: React.FC = () => {
 
     ws.onclose = () => {
       alert("Closed connection");
+      setWsError(true);
     };
   }, []);
 
@@ -54,7 +60,9 @@ const App: React.FC = () => {
 
   return (
     <div className="App">
-      {!room && (
+      {wsError && <h1>Connection closed</h1>}
+
+      {!room && !wsError && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <h1>Welcome</h1>
           <label htmlFor="usernameInput">Username</label>
@@ -85,7 +93,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {room && <h1>Room {room}</h1>}
+      {room && !wsError && <h1>Room {room}</h1>}
     </div>
   );
 };
