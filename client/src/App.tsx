@@ -1,75 +1,93 @@
-import { useCallback, useState } from "react";
+// App.tsx
+import React, { useState, useEffect } from "react";
 import "./App.css";
 
-function App() {
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [responseHistory, setResponseHistory] = useState<string[]>([]);
-  const [message, setMessage] = useState<string>("");
+const ws = new WebSocket("ws://localhost:8080");
 
-  const connect = useCallback(() => {
-    const newWs = new WebSocket("ws://localhost:8080");
+const App: React.FC = () => {
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<string[]>([]);
+  const [username, setUsername] = useState("");
+  const [roomCode, setRoomCode] = useState("");
+  const [room, setRoom] = useState("");
 
-    newWs.onopen = () => {
-      alert("Connected");
-      console.log("Connected to server");
+  const [createdRoom, setCreatedRoom] = useState<boolean>(false);
+
+  useEffect(() => {
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      console.log(data);
+
+      if (data.type === "message") {
+        setMessages((prevMessages) => [...prevMessages, data.text]);
+      } else if (data.type === "roomCode") {
+        setRoom(data.roomCode);
+        setMessages([]);
+      } else if (data.type === "error") {
+        alert(data.message);
+      }
     };
 
-    newWs.onmessage = (event) => {
-      const response = event.data;
-      setResponseHistory((prevHistory) => [
-        ...prevHistory,
-        `[sever]: ${response}`,
-      ]);
+    ws.onclose = () => {
+      alert("Closed connection");
     };
-
-    newWs.onclose = () => {
-      alert("Disconnected");
-      console.log("Disconnected from server");
-      setWs(null);
-    };
-
-    setWs(newWs);
   }, []);
 
-  const disconnect = useCallback(() => {
-    if (ws) {
-      ws.close();
-    }
-  }, [ws]);
+  const createRoom = () => {
+    setCreatedRoom(true);
+    ws.send(JSON.stringify({ type: "join", username: username }));
+  };
 
-  const sendMessage = useCallback(() => {
-    if (ws && message.trim()) {
-      ws.send(message);
-      console.log(`sent "${message.trim()}"`);
-      setResponseHistory((prevHistory) => [
-        ...prevHistory,
-        `[you]: ${message.trim()}`,
-      ]);
-      setMessage("");
+  const joinRoom = () => {
+    if (roomCode.trim() == "") {
+      alert("Please enter a room code");
+      return;
     }
-  }, [ws, message]);
+    ws.send(
+      JSON.stringify({ type: "join", username: username, room: roomCode })
+    );
+    setRoom(roomCode);
+    setRoomCode("");
+    setMessages([]);
+  };
 
   return (
-    <>
-      <p>Hello</p>
-      <div style={{ marginBottom: 15 }}>
-        <button onClick={connect}>Connect</button>
-        <button onClick={disconnect}>Disconnect</button>
-      </div>
-      <input
-        type="text"
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-      />
-      <button onClick={sendMessage}>Send message</button>
-      <h2>Response History</h2>
-      <ul>
-        {responseHistory.map((response, index) => (
-          <li key={index}>{response}</li>
-        ))}
-      </ul>
-    </>
+    <div className="App">
+      {!room && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <h1>Welcome</h1>
+          <label htmlFor="usernameInput">Username</label>
+          <input
+            type="text"
+            id="usernameInput"
+            placeholder="Username"
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <label htmlFor="roomCode">Room Code</label>
+          <input
+            type="text"
+            id="roomCode"
+            placeholder="Room Code"
+            onChange={(e) => setRoomCode(e.target.value)}
+          />
+          <div style={{ display: "flex", gap: 15 }}>
+            <button
+              onClick={joinRoom}
+              disabled={!(roomCode.trim() !== "" && username.trim() !== "")}
+            >
+              Join room
+            </button>
+            <button onClick={createRoom} disabled={username.trim() == ""}>
+              Create room
+            </button>
+          </div>
+        </div>
+      )}
+
+      {room && <h1>Room {room}</h1>}
+    </div>
   );
-}
+};
 
 export default App;
