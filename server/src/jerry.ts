@@ -1,0 +1,16 @@
+export const jerry = [
+  "*akcencik*",
+  "To już było",
+  "Kończymy wcześniej",
+  "Panowie przeginka",
+  "Kahoot",
+  "AI",
+  "Panowie powaga",
+  "6 za aktywność",
+  "Możemy tak zrobić?",
+  "Unit X test",
+  "Ja rozumiem ale nie możemy tak",
+  "Orgasmus",
+  "Time managment",
+  "To za tydzień klasóweczka",
+];
