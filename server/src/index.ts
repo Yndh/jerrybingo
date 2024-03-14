@@ -144,11 +144,13 @@ wss.on("connection", (ws: WebSocket) => {
         const leader = clients.find((client) => client.ws == room.master);
         if (!leader) return;
 
-        room.master.send(
-          JSON.stringify({
+        sendToClient(
+          code,
+          {
             type: "message",
             text: "You got promoted to room leader",
-          })
+          },
+          room.master
         );
         sendToRoom(
           code,
@@ -160,26 +162,55 @@ wss.on("connection", (ws: WebSocket) => {
         );
       }
       const clientToRemoveIndex = clients.indexOf(clientToRemove);
-      console.log(`Removed ${clientToRemove.username}`);
       clients.splice(clientToRemoveIndex, 1);
     });
   });
 });
 
 const sendToRoom = (
-  room: string,
-  message: { type: string; text: string; username?: string },
+  code: string,
+  message: {
+    type: string;
+    text: string;
+    username?: string;
+  },
   authorWs?: WebSocket
 ) => {
-  const roomClients: Room | undefined = rooms[room];
+  const roomClients: Room | undefined = rooms[code];
 
   if (roomClients) {
+    const playerList = roomClients.clients.map((client: WebSocket) => {
+      const user = clients.find((c) => c.ws === client);
+      return {
+        username: user ? user.username : "Unknown",
+        leader: user && user.ws === roomClients.master ? true : false,
+      };
+    });
     roomClients.clients.forEach((client: WebSocket) => {
       if (client !== authorWs) {
-        client.send(JSON.stringify(message));
+        client.send(JSON.stringify({ ...message, playerList }));
       }
     });
   }
+};
+
+const sendToClient = (
+  code: string,
+  message: {
+    type: string;
+    text: string;
+  },
+  clientWs: WebSocket
+) => {
+  const roomClients: Room | undefined = rooms[code];
+  const playerList = roomClients.clients.map((client: WebSocket) => {
+    const user = clients.find((c) => c.ws === client);
+    return {
+      username: user ? user.username : "Unknown",
+      leader: user && user.ws === roomClients.master ? true : false,
+    };
+  });
+  clientWs.send(JSON.stringify({ ...message, playerList }));
 };
 
 app.get("/", (req: Request, res: Response) => {

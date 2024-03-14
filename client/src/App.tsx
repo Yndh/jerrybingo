@@ -9,6 +9,11 @@ interface message {
   text: string;
 }
 
+interface player {
+  username: string;
+  leader: boolean;
+}
+
 const App: React.FC = () => {
   const [wsError, setWsError] = useState<string>("");
   const [message, setMessage] = useState("");
@@ -16,12 +21,13 @@ const App: React.FC = () => {
   const [username, setUsername] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [room, setRoom] = useState("");
+  const [playerList, setPlayerList] = useState<player[]>([]);
 
   const [createdRoom, setCreatedRoom] = useState<boolean>(false);
 
   useEffect(() => {
     ws.onopen = () => {
-      setWsError(false);
+      setWsError("");
     };
 
     ws.onmessage = (event) => {
@@ -35,6 +41,7 @@ const App: React.FC = () => {
           ...prevMessages,
           { username: data.username, text: data.text },
         ]);
+        setPlayerList(data.playerList);
       } else if (data.type === "roomCode") {
         setRoom(data.roomCode);
         setMessages([]);
@@ -55,6 +62,7 @@ const App: React.FC = () => {
   const createRoom = () => {
     setCreatedRoom(true);
     ws.send(JSON.stringify({ type: "join", username: username }));
+    setPlayerList([{ username, leader: true }]);
   };
 
   const joinRoom = () => {
@@ -129,6 +137,14 @@ const App: React.FC = () => {
         <>
           <h1>Room {room}</h1>
           <h3>Players</h3>
+          <ul>
+            {playerList.map((player: player, index: number) => (
+              <li key={index}>
+                {player.leader ? "👑" : ""}
+                {player.username}
+              </li>
+            ))}
+          </ul>
           <h3>Chat</h3>
           <ul>
             {messages.map((message: message, index: number) => (
