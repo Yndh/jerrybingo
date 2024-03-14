@@ -80,8 +80,11 @@ wss.on("connection", (ws: WebSocket) => {
   });
 
   ws.on("close", () => {
+    // Handle client leave
     clients.forEach((client, index) => {
       if (client.ws = ws) {
+        clients.splice(index, 1)
+
         const clientRooms = Object.keys(rooms).filter(code => rooms[code].clients.includes(ws))
 
         clientRooms.forEach(code => {
