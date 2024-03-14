@@ -4,6 +4,7 @@ const http = require("http");
 
 interface Client {
   ws: WebSocket;
+  username: string;
   code: string;
 }
 
@@ -36,21 +37,41 @@ wss.on("connection", (ws: WebSocket) => {
       text?: string;
     } = JSON.parse(msg.toString());
 
+    console.table(clients);
+
     if (data.type === "join") {
       if (data.room) {
         // Join Room
-        const room: string = data.room;
-        if (!rooms[room]) {
+        const code: string = data.room;
+        if (!rooms[code]) {
           ws.send(JSON.stringify({ type: "error", message: "Room not found" }));
           return;
         }
+        if (!data.username || data.username.trim() == "") {
+          ws.send(
+            JSON.stringify({ type: "error", message: "No username provided" })
+          );
+          return;
+        }
 
-        rooms[room].clients.push(ws);
-        sendToRoom(room, {
+        clients.push({
+          ws: ws,
+          username: data.username,
+          code: code,
+        });
+        rooms[code].clients.push(ws);
+        sendToRoom(code, {
           type: "message",
           text: `${data.username} joined the room`,
         });
       } else {
+        if (!data.username || data.username.trim() == "") {
+          ws.send(
+            JSON.stringify({ type: "error", message: "No username provided" })
+          );
+          return;
+        }
+
         // Create New Room
         const code: string = generateRoomCode();
         rooms[code] = {
@@ -58,13 +79,24 @@ wss.on("connection", (ws: WebSocket) => {
           clients: [ws],
           roomCode: code,
         };
-        clients.push({ ws, code });
+        clients.push({
+          ws: ws,
+          username: data.username,
+          code: code,
+        });
         ws.send(JSON.stringify({ type: "roomCode", roomCode: code }));
       }
     } else if (data.type === "message") {
       if (data.room && data.text) {
         const room: string = data.room;
-        const username: string = data.username || "unknown";
+        const client = clients.find((client) => client.ws === ws);
+        if (!client) {
+          ws.send(
+            JSON.stringify({ type: "error", message: "No client found" })
+          );
+          return;
+        }
+        const username: string = client.username;
 
         sendToRoom(
           room,
@@ -81,41 +113,58 @@ wss.on("connection", (ws: WebSocket) => {
 
   ws.on("close", () => {
     // Handle client leave
-    clients.forEach((client, index) => {
-      if (client.ws = ws) {
-        clients.splice(index, 1)
+    const clientToRemove = clients.find((clients) => clients.ws === ws);
+    if (!clientToRemove) return;
 
-        const clientRooms = Object.keys(rooms).filter(code => rooms[code].clients.includes(ws))
+    const clientRooms = Object.keys(rooms).filter((code) =>
+      rooms[code].clients.includes(ws)
+    );
 
-        clientRooms.forEach(code => {
-          const room = rooms[code]
-          const clientIndex = room.clients.indexOf(ws)
-          if (clientIndex != -1) {
-            room.clients.splice(clientIndex, 1)
-
-            sendToRoom(code, {
-              type: "message",
-              text: `${client.code} left the room`,
-            });
-
-            if (client.ws === room.master) {
-              if(room.clients.length === 0){
-                delete rooms[code];
-                return
-              }
-              room.master = room.clients[0]
-              room.master.send(JSON.stringify({
-                type: "message",
-                text: `You got promoted to room master`
-              }))
-            }
-          }
-        })
+    clientRooms.forEach((code) => {
+      const room = rooms[code];
+      const clientIndex = room.clients.indexOf(ws);
+      if (clientIndex === -1) {
+        return;
       }
-    })
-  })
-});
 
+      room.clients.splice(clientIndex, 1);
+
+      sendToRoom(code, {
+        type: "message",
+        text: `${clientToRemove.username} left the room`,
+      });
+
+      if (clientToRemove.ws === room.master) {
+        if (room.clients.length == 0) {
+          delete rooms[code];
+          return;
+        }
+
+        room.master = room.clients[0];
+        const leader = clients.find((client) => client.ws == room.master);
+        if (!leader) return;
+
+        room.master.send(
+          JSON.stringify({
+            type: "message",
+            text: "You got promoted to room leader",
+          })
+        );
+        sendToRoom(
+          code,
+          {
+            type: "message",
+            text: `${leader.username} got promoted to room leader`,
+          },
+          leader.ws
+        );
+      }
+      const clientToRemoveIndex = clients.indexOf(clientToRemove);
+      console.log(`Removed ${clientToRemove.username}`);
+      clients.splice(clientToRemoveIndex, 1);
+    });
+  });
+});
 
 const sendToRoom = (
   room: string,

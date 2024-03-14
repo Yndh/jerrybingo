@@ -10,7 +10,7 @@ interface message {
 }
 
 const App: React.FC = () => {
-  const [wsError, setWsError] = useState<boolean>(false);
+  const [wsError, setWsError] = useState<string>("");
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<message[]>([]);
   const [username, setUsername] = useState("");
@@ -40,12 +40,15 @@ const App: React.FC = () => {
         setMessages([]);
       } else if (data.type === "error") {
         alert(data.message);
+        setWsError(data.message);
+        setUsername("");
+        setRoom("");
+        setMessages([]);
       }
     };
 
     ws.onclose = () => {
-      alert("Closed connection");
-      setWsError(true);
+      setWsError("Conenction closed");
     };
   }, []);
 
@@ -77,7 +80,6 @@ const App: React.FC = () => {
       JSON.stringify({
         type: "message",
         text: message,
-        username: username,
         room: room,
       })
     );
@@ -90,7 +92,7 @@ const App: React.FC = () => {
 
   return (
     <div className="App">
-      {wsError && <h1>Connection closed</h1>}
+      {wsError && <h1>{wsError}</h1>}
 
       {!room && !wsError && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -126,6 +128,8 @@ const App: React.FC = () => {
       {room && !wsError && (
         <>
           <h1>Room {room}</h1>
+          <h3>Players</h3>
+          <h3>Chat</h3>
           <ul>
             {messages.map((message: message, index: number) => (
               <li key={index}>
