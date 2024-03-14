@@ -78,7 +78,41 @@ wss.on("connection", (ws: WebSocket) => {
       }
     }
   });
+
+  ws.on("close", () => {
+    clients.forEach((client, index) => {
+      if (client.ws = ws) {
+        const clientRooms = Object.keys(rooms).filter(code => rooms[code].clients.includes(ws))
+
+        clientRooms.forEach(code => {
+          const room = rooms[code]
+          const clientIndex = room.clients.indexOf(ws)
+          if (clientIndex != -1) {
+            room.clients.splice(clientIndex, 1)
+
+            sendToRoom(code, {
+              type: "message",
+              text: `${client.code} left the room`,
+            });
+
+            if (client.ws === room.master) {
+              if(room.clients.length === 0){
+                delete rooms[code];
+                return
+              }
+              room.master = room.clients[0]
+              room.master.send(JSON.stringify({
+                type: "message",
+                text: `You got promoted to room master`
+              }))
+            }
+          }
+        })
+      }
+    })
+  })
 });
+
 
 const sendToRoom = (
   room: string,
