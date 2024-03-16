@@ -6,7 +6,12 @@ const http = require("http");
 interface Client {
   ws: WebSocket;
   username: string;
-  board: string[][];
+  board: Cell[][];
+}
+
+interface Cell {
+  value: string;
+  checked: boolean;
 }
 
 interface Room {
@@ -207,15 +212,21 @@ const generateRoomCode = (): string => {
   return code;
 };
 
-const generateBoard = (size: number): string[][] => {
-  const board: string[][] = [];
+const generateBoard = (size: number): Cell[][] => {
+  const board: Cell[][] = [];
 
-  const availableItems = jerry.sort(() => Math.random() - 0.5);
+  const items = jerry.sort(() => Math.random() - 0.5);
+
+  const centerIndex = Math.floor(size / 2);
 
   for (let i = 0; i < size; i++) {
     board.push([]);
     for (let j = 0; j < size; j++) {
-      board[i].push(availableItems[i * 4 + j]);
+      if (i === centerIndex && j === centerIndex) {
+        board[i].push({ value: "FREE", checked: false }); // Place "FREE" in the center
+      } else {
+        board[i].push({ value: items[i * 4 + j], checked: false });
+      }
     }
   }
 
@@ -253,7 +264,7 @@ const sendToClient = (
   message: {
     type: string;
     text: string;
-    board?: string[][];
+    board?: Cell[][];
   },
   clientWs: WebSocket
 ) => {

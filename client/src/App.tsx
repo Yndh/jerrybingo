@@ -4,14 +4,19 @@ import "./App.css";
 
 const ws = new WebSocket("ws://localhost:8080");
 
-interface message {
+interface Message {
   username?: string;
   text: string;
 }
 
-interface player {
+interface Player {
   username: string;
   leader: boolean;
+}
+
+interface Cell {
+  value: string;
+  checked: boolean;
 }
 
 const App: React.FC = () => {
@@ -23,13 +28,13 @@ const App: React.FC = () => {
 
   //Room
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [room, setRoom] = useState<string>("");
-  const [playerList, setPlayerList] = useState<player[]>([]);
+  const [playerList, setPlayerList] = useState<Player[]>([]);
   const [createdRoom, setCreatedRoom] = useState<boolean>(false);
 
   //Game
-  const [board, setBoard] = useState<string[][]>([]);
+  const [board, setBoard] = useState<Cell[][]>([]);
   const [gameStarted, setGameStarted] = useState<boolean>(false);
 
   useEffect(() => {
@@ -207,8 +212,11 @@ const App: React.FC = () => {
             {board.map((row, rowIndex) => (
               <div key={rowIndex} className="board-row">
                 {row.map((cell, columnIndex) => (
-                  <div key={columnIndex} className="board-cell">
-                    <span>{cell}</span>
+                  <div
+                    key={columnIndex}
+                    className={`board-cell ${cell.checked ? "checked" : ""}`}
+                  >
+                    <span>{cell.value}</span>
                   </div>
                 ))}
               </div>
