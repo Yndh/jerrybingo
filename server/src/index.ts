@@ -1,15 +1,18 @@
 import express, { Request, Response } from "express";
 import WebSocket from "ws";
+import { jerry } from "./jerry";
 const http = require("http");
 
 interface Client {
   ws: WebSocket;
   username: string;
+  board: string[][];
 }
 
 interface Room {
   leader: WebSocket;
   clients: Client[];
+  gameStarted: boolean;
   roomCode: string;
 }
 
@@ -50,6 +53,7 @@ wss.on("connection", (ws: WebSocket) => {
         rooms[code].clients.push({
           ws: ws,
           username: data.username,
+          board: [],
         });
         sendToRoom(code, {
           type: "message",
@@ -71,9 +75,11 @@ wss.on("connection", (ws: WebSocket) => {
             {
               ws: ws,
               username: data.username,
+              board: [],
             },
           ],
           roomCode: code,
+          gameStarted: false,
         };
         ws.send(JSON.stringify({ type: "roomCode", roomCode: code }));
       }
@@ -98,6 +104,50 @@ wss.on("connection", (ws: WebSocket) => {
           },
           ws
         );
+      }
+    } else if (data.type === "start") {
+      if (data.room) {
+        const code: string = data.room;
+        const room = rooms[code];
+        if (!room) {
+          ws.send(JSON.stringify({ type: "error", message: "Room not found" }));
+          return;
+        }
+
+        if (room.leader !== ws) {
+          ws.send(
+            JSON.stringify({
+              type: "warning",
+              message: "Only leader can start game",
+            })
+          );
+          return;
+        }
+
+        if (room.gameStarted) {
+          ws.send(
+            JSON.stringify({
+              type: "warning",
+              message: "Game has already started",
+            })
+          );
+          return;
+        }
+
+        room.gameStarted = true;
+        room.clients.forEach((client) => {
+          client.board = generateBoard();
+          console.log(client.board);
+          sendToClient(
+            code,
+            {
+              type: "gameStarted",
+              text: "",
+              board: client.board,
+            },
+            client.ws
+          );
+        });
       }
     }
   });
@@ -135,7 +185,7 @@ wss.on("connection", (ws: WebSocket) => {
         sendToClient(
           code,
           {
-            type: "message",
+            type: "permission",
             text: "You got promoted to room leader",
           },
           leader.ws
@@ -156,6 +206,21 @@ wss.on("connection", (ws: WebSocket) => {
 const generateRoomCode = (): string => {
   const code: string = Math.floor(10000 + Math.random() * 90000).toString();
   return code;
+};
+
+const generateBoard = (): string[][] => {
+  const board: string[][] = [];
+
+  const availableItems = jerry.sort(() => Math.random() - 0.5);
+
+  for (let i = 0; i < 4; i++) {
+    board.push([]);
+    for (let j = 0; j < 4; j++) {
+      board[i].push(availableItems[i * 4 + j]);
+    }
+  }
+
+  return board;
 };
 
 const sendToRoom = (
@@ -189,6 +254,7 @@ const sendToClient = (
   message: {
     type: string;
     text: string;
+    board?: string[][];
   },
   clientWs: WebSocket
 ) => {

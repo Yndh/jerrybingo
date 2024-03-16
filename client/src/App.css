@@ -11,17 +11,44 @@
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+.game-board {
+  display: inline-block;
+  border-radius: 25px;
+}
+
+.board-row {
+  display: flex;
+}
+
+.board-cell {
+  width: 150px;
+  aspect-ratio: 1/1;
+  background: #1f1f1f;
+  border: 1px solid #fefefe0e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+}
+
+.board-cell span {
+  width: 80%;
 }
 
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }

@@ -16,14 +16,21 @@ interface player {
 
 const App: React.FC = () => {
   const [wsError, setWsError] = useState<string>("");
+
+  //Lobby
+  const [username, setUsername] = useState<string>("");
+  const [roomCode, setRoomCode] = useState<string>("");
+
+  //Room
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<message[]>([]);
-  const [username, setUsername] = useState("");
-  const [roomCode, setRoomCode] = useState("");
-  const [room, setRoom] = useState("");
+  const [room, setRoom] = useState<string>("");
   const [playerList, setPlayerList] = useState<player[]>([]);
-
   const [createdRoom, setCreatedRoom] = useState<boolean>(false);
+
+  //Game
+  const [board, setBoard] = useState<string[][]>([]);
+  const [gameStarted, setGameStarted] = useState<boolean>(false);
 
   useEffect(() => {
     ws.onopen = () => {
@@ -42,9 +49,20 @@ const App: React.FC = () => {
           { username: data.username, text: data.text },
         ]);
         setPlayerList(data.playerList);
+      } else if (data.type === "permission") {
+        console.table(data);
+        setCreatedRoom(true);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { username: data.username, text: data.text },
+        ]);
+        setPlayerList(data.playerList);
       } else if (data.type === "roomCode") {
         setRoom(data.roomCode);
         setMessages([]);
+      } else if (data.type === "gameStarted") {
+        setBoard(data.board);
+        setGameStarted(true);
       } else if (data.type === "error") {
         alert(data.message);
         setWsError(data.message);
@@ -98,6 +116,15 @@ const App: React.FC = () => {
     setMessage("");
   };
 
+  const startGame = () => {
+    ws.send(
+      JSON.stringify({
+        type: "start",
+        room: room,
+      })
+    );
+  };
+
   return (
     <div className="App">
       {wsError && <h1>{wsError}</h1>}
@@ -133,7 +160,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {room && !wsError && (
+      {room && !wsError && !gameStarted && (
         <>
           <h1>Room {room}</h1>
           <h3>Players</h3>
@@ -161,7 +188,33 @@ const App: React.FC = () => {
             onChange={(e) => setMessage(e.target.value)}
           />
           <button onClick={sendMessage}>Send</button>
+
+          {createdRoom && (
+            <button
+              style={{ width: "100%", marginTop: 25 }}
+              onClick={startGame}
+            >
+              Start Game
+            </button>
+          )}
         </>
+      )}
+
+      {room && gameStarted && !wsError && (
+        <div>
+          <h2>Game Board</h2>
+          <div className="game-board">
+            {board.map((row, rowIndex) => (
+              <div key={rowIndex} className="board-row">
+                {row.map((cell, columnIndex) => (
+                  <div key={columnIndex} className="board-cell">
+                    <span>{cell}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
