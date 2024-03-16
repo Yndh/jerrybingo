@@ -5,12 +5,11 @@ const http = require("http");
 interface Client {
   ws: WebSocket;
   username: string;
-  code: string;
 }
 
 interface Room {
-  master: WebSocket;
-  clients: WebSocket[];
+  leader: WebSocket;
+  clients: Client[];
   roomCode: string;
 }
 
@@ -20,13 +19,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const clients: Client[] = [];
 const rooms: { [key: string]: Room } = {};
-
-const generateRoomCode = (): string => {
-  const code: string = Math.floor(10000 + Math.random() * 90000).toString();
-  return code;
-};
 
 wss.on("connection", (ws: WebSocket) => {
   ws.on("message", (msg: WebSocket.Data) => {
@@ -37,7 +30,7 @@ wss.on("connection", (ws: WebSocket) => {
       text?: string;
     } = JSON.parse(msg.toString());
 
-    console.table(clients);
+    console.table(rooms);
 
     if (data.type === "join") {
       if (data.room) {
@@ -54,12 +47,10 @@ wss.on("connection", (ws: WebSocket) => {
           return;
         }
 
-        clients.push({
+        rooms[code].clients.push({
           ws: ws,
           username: data.username,
-          code: code,
         });
-        rooms[code].clients.push(ws);
         sendToRoom(code, {
           type: "message",
           text: `${data.username} joined the room`,
@@ -75,21 +66,21 @@ wss.on("connection", (ws: WebSocket) => {
         // Create New Room
         const code: string = generateRoomCode();
         rooms[code] = {
-          master: ws,
-          clients: [ws],
+          leader: ws,
+          clients: [
+            {
+              ws: ws,
+              username: data.username,
+            },
+          ],
           roomCode: code,
         };
-        clients.push({
-          ws: ws,
-          username: data.username,
-          code: code,
-        });
         ws.send(JSON.stringify({ type: "roomCode", roomCode: code }));
       }
     } else if (data.type === "message") {
       if (data.room && data.text) {
         const room: string = data.room;
-        const client = clients.find((client) => client.ws === ws);
+        const client = rooms[room].clients.find((client) => client.ws === ws);
         if (!client) {
           ws.send(
             JSON.stringify({ type: "error", message: "No client found" })
@@ -113,20 +104,18 @@ wss.on("connection", (ws: WebSocket) => {
 
   ws.on("close", () => {
     // Handle client leave
-    const clientToRemove = clients.find((clients) => clients.ws === ws);
-    if (!clientToRemove) return;
-
     const clientRooms = Object.keys(rooms).filter((code) =>
-      rooms[code].clients.includes(ws)
+      rooms[code].clients.some((client) => client.ws === ws)
     );
 
     clientRooms.forEach((code) => {
       const room = rooms[code];
-      const clientIndex = room.clients.indexOf(ws);
+      const clientIndex = room.clients.findIndex((client) => client.ws === ws);
       if (clientIndex === -1) {
         return;
       }
 
+      const clientToRemove = room.clients[clientIndex];
       room.clients.splice(clientIndex, 1);
 
       sendToRoom(code, {
@@ -134,15 +123,14 @@ wss.on("connection", (ws: WebSocket) => {
         text: `${clientToRemove.username} left the room`,
       });
 
-      if (clientToRemove.ws === room.master) {
+      if (clientToRemove.ws === room.leader) {
         if (room.clients.length == 0) {
           delete rooms[code];
           return;
         }
 
-        room.master = room.clients[0];
-        const leader = clients.find((client) => client.ws == room.master);
-        if (!leader) return;
+        room.leader = room.clients[0].ws;
+        const leader = room.clients[0];
 
         sendToClient(
           code,
@@ -150,7 +138,7 @@ wss.on("connection", (ws: WebSocket) => {
             type: "message",
             text: "You got promoted to room leader",
           },
-          room.master
+          leader.ws
         );
         sendToRoom(
           code,
@@ -161,11 +149,14 @@ wss.on("connection", (ws: WebSocket) => {
           leader.ws
         );
       }
-      const clientToRemoveIndex = clients.indexOf(clientToRemove);
-      clients.splice(clientToRemoveIndex, 1);
     });
   });
 });
+
+const generateRoomCode = (): string => {
+  const code: string = Math.floor(10000 + Math.random() * 90000).toString();
+  return code;
+};
 
 const sendToRoom = (
   code: string,
@@ -176,19 +167,18 @@ const sendToRoom = (
   },
   authorWs?: WebSocket
 ) => {
-  const roomClients: Room | undefined = rooms[code];
+  const room: Room | undefined = rooms[code];
 
-  if (roomClients) {
-    const playerList = roomClients.clients.map((client: WebSocket) => {
-      const user = clients.find((c) => c.ws === client);
+  if (room) {
+    const playerList = room.clients.map((client) => {
       return {
-        username: user ? user.username : "Unknown",
-        leader: user && user.ws === roomClients.master ? true : false,
+        username: client.username,
+        leader: client.ws === room.leader ? true : false,
       };
     });
-    roomClients.clients.forEach((client: WebSocket) => {
-      if (client !== authorWs) {
-        client.send(JSON.stringify({ ...message, playerList }));
+    room.clients.forEach((client) => {
+      if (client.ws !== authorWs) {
+        client.ws.send(JSON.stringify({ ...message, playerList }));
       }
     });
   }
@@ -202,12 +192,11 @@ const sendToClient = (
   },
   clientWs: WebSocket
 ) => {
-  const roomClients: Room | undefined = rooms[code];
-  const playerList = roomClients.clients.map((client: WebSocket) => {
-    const user = clients.find((c) => c.ws === client);
+  const room: Room | undefined = rooms[code];
+  const playerList = room.clients.map((client) => {
     return {
-      username: user ? user.username : "Unknown",
-      leader: user && user.ws === roomClients.master ? true : false,
+      username: client.username,
+      leader: client.ws === room.leader ? true : false,
     };
   });
   clientWs.send(JSON.stringify({ ...message, playerList }));
