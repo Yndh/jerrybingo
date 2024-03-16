@@ -136,8 +136,7 @@ wss.on("connection", (ws: WebSocket) => {
 
         room.gameStarted = true;
         room.clients.forEach((client) => {
-          client.board = generateBoard();
-          console.log(client.board);
+          client.board = generateBoard(5);
           sendToClient(
             code,
             {
@@ -208,14 +207,14 @@ const generateRoomCode = (): string => {
   return code;
 };
 
-const generateBoard = (): string[][] => {
+const generateBoard = (size: number): string[][] => {
   const board: string[][] = [];
 
   const availableItems = jerry.sort(() => Math.random() - 0.5);
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < size; i++) {
     board.push([]);
-    for (let j = 0; j < 4; j++) {
+    for (let j = 0; j < size; j++) {
       board[i].push(availableItems[i * 4 + j]);
     }
   }
