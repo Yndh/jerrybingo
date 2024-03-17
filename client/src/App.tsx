@@ -14,6 +14,7 @@ interface Message {
 interface Player {
   username: string;
   leader: boolean;
+  inGame: boolean;
   checkedCells?: number;
   bingo?: boolean;
 }
@@ -283,7 +284,7 @@ const App: React.FC = () => {
             <h3>Players</h3>
             <ul>
               {playerList
-                .slice()
+                .filter((player: Player) => player.inGame)
                 .sort((a: Player, b: Player) => {
                   const checkedCellsA = a.checkedCells || 0;
                   const checkedCellsB = b.checkedCells || 0;
@@ -299,6 +300,17 @@ const App: React.FC = () => {
                     {player.username + " "}
                     {player.checkedCells}/{board.length * board.length}
                     {player.bingo && " 🔥[BINGO]🔥"}
+                  </li>
+                ))}
+            </ul>
+            <ul style={{ opacity: 0.7 }}>
+              {playerList
+                .filter((player: Player) => !player.inGame)
+                .map((player: Player, index: number) => (
+                  <li key={index}>
+                    {player.leader ? "👑" : ""}
+                    {player.username}
+                    {" [Lobby]"}
                   </li>
                 ))}
             </ul>

@@ -6,6 +6,7 @@ const http = require("http");
 interface Client {
   ws: WebSocket;
   username: string;
+  inGame: boolean;
   bingo: boolean;
   board: Cell[][];
 }
@@ -60,6 +61,7 @@ wss.on("connection", (ws: WebSocket) => {
         rooms[code].clients.push({
           ws: ws,
           username: data.username,
+          inGame: false,
           bingo: false,
           board: [],
         });
@@ -83,6 +85,7 @@ wss.on("connection", (ws: WebSocket) => {
             {
               ws: ws,
               username: data.username,
+              inGame: false,
               bingo: false,
               board: [],
             },
@@ -146,6 +149,8 @@ wss.on("connection", (ws: WebSocket) => {
         room.gameStarted = true;
         room.clients.forEach((client) => {
           client.board = generateBoard(5);
+          client.inGame = true;
+          client.bingo = false;
           sendToClient(
             code,
             {
@@ -155,6 +160,10 @@ wss.on("connection", (ws: WebSocket) => {
             },
             client.ws
           );
+        });
+        sendToRoom(code, {
+          type: "message",
+          text: "",
         });
       }
     } else if (data.type === "move") {
@@ -233,6 +242,8 @@ wss.on("connection", (ws: WebSocket) => {
           const playersBingo = checkPlayersBingo(room);
           if (playersBingo) {
             room.gameStarted = false;
+            room.clients.map((client) => (client.bingo = false));
+
             sendToRoom(code, {
               type: "gameEnded",
               text: "",
@@ -406,7 +417,7 @@ const checkBoard = (board: Cell[][]) => {
 const checkPlayersBingo = (room: Room) => {
   let playersBingo = true;
   room.clients.forEach((client) => {
-    if (!client.bingo) {
+    if (!client.bingo && client.inGame) {
       playersBingo = false;
     }
   });
@@ -442,6 +453,7 @@ const sendToRoom = (
       return {
         username: client.username,
         leader: client.ws === room.leader ? true : false,
+        inGame: client.inGame,
         checkedCells: countChecked(client.board),
         bingo: client.bingo,
       };
@@ -468,6 +480,7 @@ const sendToClient = (
     return {
       username: client.username,
       leader: client.ws === room.leader ? true : false,
+      inGame: client.inGame,
       checkedCells: countChecked(client.board),
       bingo: client.bingo,
     };
