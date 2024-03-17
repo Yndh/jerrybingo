@@ -228,13 +228,15 @@ const App: React.FC = () => {
           />
           <button onClick={sendMessage}>Send</button>
 
-          {createdRoom && (
+          {createdRoom ? (
             <button
               style={{ width: "100%", marginTop: 25 }}
               onClick={startGame}
             >
               Start Game
             </button>
+          ) : (
+            <h4>Waiting for leader to start game...</h4>
           )}
         </>
       )}
@@ -280,14 +282,25 @@ const App: React.FC = () => {
 
             <h3>Players</h3>
             <ul>
-              {playerList.map((player: Player, index: number) => (
-                <li key={index}>
-                  {player.leader ? "👑" : ""}
-                  {player.username + " "}
-                  {player.checkedCells}/{board.length * board.length}
-                  {player.bingo && " 🔥[BINGO]🔥"}
-                </li>
-              ))}
+              {playerList
+                .slice()
+                .sort((a: Player, b: Player) => {
+                  const checkedCellsA = a.checkedCells || 0;
+                  const checkedCellsB = b.checkedCells || 0;
+
+                  if (checkedCellsA !== checkedCellsB) {
+                    return checkedCellsB - checkedCellsA;
+                  }
+                  return b.bingo ? 1 : -1;
+                })
+                .map((player: Player, index: number) => (
+                  <li key={index}>
+                    {player.leader ? "👑" : ""}
+                    {player.username + " "}
+                    {player.checkedCells}/{board.length * board.length}
+                    {player.bingo && " 🔥[BINGO]🔥"}
+                  </li>
+                ))}
             </ul>
 
             <button onClick={endGame}>End game</button>
