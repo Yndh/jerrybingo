@@ -126,7 +126,7 @@ wss.on("connection", (ws: WebSocket) => {
         if (room.leader !== ws) {
           ws.send(
             JSON.stringify({
-              type: "warning",
+              type: "error",
               message: "Only leader can start game",
             })
           );
@@ -136,7 +136,7 @@ wss.on("connection", (ws: WebSocket) => {
         if (room.gameStarted) {
           ws.send(
             JSON.stringify({
-              type: "warning",
+              type: "error",
               message: "Game has already started",
             })
           );
@@ -229,6 +229,15 @@ wss.on("connection", (ws: WebSocket) => {
             type: "message",
             text: `${client.username} got a BINGO!`,
           });
+
+          const playersBingo = checkPlayersBingo(room);
+          if (playersBingo) {
+            room.gameStarted = false;
+            sendToRoom(code, {
+              type: "gameEnded",
+              text: "",
+            });
+          }
           return;
         }
 
@@ -241,6 +250,41 @@ wss.on("connection", (ws: WebSocket) => {
           },
           ws
         );
+      }
+    } else if (data.type === "end") {
+      if (data.room) {
+        const code = data.room;
+        const room = rooms[code];
+        if (!room) {
+          ws.send(JSON.stringify({ type: "error", message: "Room not found" }));
+          return;
+        }
+
+        if (room.leader !== ws) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Only leader can end game",
+            })
+          );
+          return;
+        }
+
+        if (!room.gameStarted) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Game must be started",
+            })
+          );
+          return;
+        }
+
+        room.gameStarted = false;
+        sendToRoom(code, {
+          type: "gameEnded",
+          text: "",
+        });
       }
     }
   });
@@ -312,7 +356,7 @@ const generateBoard = (size: number): Cell[][] => {
     board.push([]);
     for (let j = 0; j < size; j++) {
       if (i === centerIndex && j === centerIndex) {
-        board[i].push({ value: "FREE", checked: false }); // Place "FREE" in the center
+        board[i].push({ value: "FREE", checked: false });
       } else {
         board[i].push({ value: items[i * 4 + j], checked: false });
       }
@@ -357,6 +401,17 @@ const checkBoard = (board: Cell[][]) => {
   }
 
   return false;
+};
+
+const checkPlayersBingo = (room: Room) => {
+  let playersBingo = true;
+  room.clients.forEach((client) => {
+    if (!client.bingo) {
+      playersBingo = false;
+    }
+  });
+
+  return playersBingo;
 };
 
 const countChecked = (board: Cell[][]): number => {

@@ -79,6 +79,10 @@ const App: React.FC = () => {
         setBoard(data.board);
         setBingo(true);
         toast.success("BINGO!");
+      } else if (data.type === "gameEnded") {
+        setBoard([]);
+        setBingo(false);
+        setGameStarted(false);
       } else if (data.type === "error") {
         toast.error(data.message);
         setUsername("");
@@ -146,6 +150,15 @@ const App: React.FC = () => {
         type: "move",
         room: room,
         value: { x, y },
+      })
+    );
+  };
+
+  const endGame = () => {
+    ws.send(
+      JSON.stringify({
+        type: "end",
+        room: room,
       })
     );
   };
@@ -276,6 +289,8 @@ const App: React.FC = () => {
                 </li>
               ))}
             </ul>
+
+            <button onClick={endGame}>End game</button>
           </div>
         </div>
       )}
