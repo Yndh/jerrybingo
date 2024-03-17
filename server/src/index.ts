@@ -9,6 +9,7 @@ interface Client {
   inGame: boolean;
   bingo: boolean;
   board: Cell[][];
+  bingoTimestamp?: number;
 }
 
 interface Cell {
@@ -20,7 +21,16 @@ interface Room {
   leader: WebSocket;
   clients: Client[];
   gameStarted: boolean;
+  gameTimestamp?: number;
   roomCode: string;
+}
+
+interface TopThree {
+  username: string;
+  bingo: boolean;
+  bingoTimestamp?: number;
+  gameTimestamp?: number;
+  checkedCells: number;
 }
 
 const PORT: number = 8080;
@@ -147,6 +157,7 @@ wss.on("connection", (ws: WebSocket) => {
         }
 
         room.gameStarted = true;
+        room.gameTimestamp = Date.now();
         room.clients.forEach((client) => {
           client.board = generateBoard(5);
           client.inGame = true;
@@ -225,6 +236,7 @@ wss.on("connection", (ws: WebSocket) => {
         const bingo = checkBoard(client.board);
         if (bingo) {
           client.bingo = true;
+          client.bingoTimestamp = Date.now();
           sendToClient(
             code,
             {
@@ -242,12 +254,14 @@ wss.on("connection", (ws: WebSocket) => {
           const playersBingo = checkPlayersBingo(room);
           if (playersBingo) {
             room.gameStarted = false;
-            room.clients.map((client) => (client.bingo = false));
 
+            room.clients.map((client) => (client.inGame = false));
             sendToRoom(code, {
               type: "gameEnded",
               text: "",
+              leaderboard: getTopThreePlayers(room),
             });
+            room.clients.map((client) => (client.bingo = false));
           }
           return;
         }
@@ -292,10 +306,13 @@ wss.on("connection", (ws: WebSocket) => {
         }
 
         room.gameStarted = false;
+        room.clients.map((client) => (client.inGame = false));
         sendToRoom(code, {
           type: "gameEnded",
           text: "",
+          leaderboard: getTopThreePlayers(room),
         });
+        room.clients.map((client) => (client.bingo = false));
       }
     }
   });
@@ -377,7 +394,7 @@ const generateBoard = (size: number): Cell[][] => {
   return board;
 };
 
-const checkBoard = (board: Cell[][]) => {
+const checkBoard = (board: Cell[][]): boolean => {
   const size = board.length;
 
   for (let x = 0; x < size; x++) {
@@ -414,7 +431,7 @@ const checkBoard = (board: Cell[][]) => {
   return false;
 };
 
-const checkPlayersBingo = (room: Room) => {
+const checkPlayersBingo = (room: Room): boolean => {
   let playersBingo = true;
   room.clients.forEach((client) => {
     if (!client.bingo && client.inGame) {
@@ -437,12 +454,47 @@ const countChecked = (board: Cell[][]): number => {
   return count;
 };
 
+const getTopThreePlayers = (room: Room): TopThree[] => {
+  const bingoPlayers = room.clients;
+
+  bingoPlayers.forEach((player) => {
+    if (!player.bingoTimestamp) {
+      player.bingoTimestamp = Date.now();
+    }
+  });
+
+  bingoPlayers.sort((a, b) => {
+    if (a.bingoTimestamp && b.bingoTimestamp) {
+      if (a.bingoTimestamp !== b.bingoTimestamp) {
+        return a.bingoTimestamp - b.bingoTimestamp;
+      } else {
+        return countChecked(a.board) - countChecked(b.board);
+      }
+    } else {
+      return countChecked(a.board) - countChecked(b.board);
+    }
+  });
+
+  const topThree = bingoPlayers.slice(0, 3).map((player) => {
+    return {
+      username: player.username,
+      bingo: player.bingo,
+      bingoTimestamp: player.bingoTimestamp,
+      gameTimestamp: room.gameTimestamp,
+      checkedCells: countChecked(player.board),
+    };
+  });
+
+  return topThree;
+};
+
 const sendToRoom = (
   code: string,
   message: {
     type: string;
     text: string;
     username?: string;
+    leaderboard?: TopThree[];
   },
   authorWs?: WebSocket
 ) => {

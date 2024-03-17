@@ -24,6 +24,14 @@ interface Cell {
   checked: boolean;
 }
 
+interface TopThree {
+  username: string;
+  bingo: boolean;
+  bingoTimestamp?: number;
+  gameTimestamp?: number;
+  checkedCells: number;
+}
+
 const App: React.FC = () => {
   const [wsError, setWsError] = useState<string>("");
 
@@ -42,6 +50,10 @@ const App: React.FC = () => {
   const [board, setBoard] = useState<Cell[][]>([]);
   const [gameStarted, setGameStarted] = useState<boolean>(false);
   const [bingo, setBingo] = useState<boolean>(false);
+
+  // Overview
+  const [overview, setOverview] = useState<boolean>(false);
+  const [leaderboard, setLeaderboard] = useState<TopThree[]>([]);
 
   useEffect(() => {
     ws.onopen = () => {
@@ -84,6 +96,9 @@ const App: React.FC = () => {
         setBoard([]);
         setBingo(false);
         setGameStarted(false);
+        setLeaderboard(data.leaderboard);
+        setPlayerList(data.playerList);
+        setOverview(true);
       } else if (data.type === "error") {
         toast.error(data.message);
         setUsername("");
@@ -100,7 +115,7 @@ const App: React.FC = () => {
   const createRoom = () => {
     setCreatedRoom(true);
     ws.send(JSON.stringify({ type: "join", username: username }));
-    setPlayerList([{ username, leader: true }]);
+    setPlayerList([{ username, leader: true, inGame: false }]);
   };
 
   const joinRoom = () => {
@@ -164,11 +179,30 @@ const App: React.FC = () => {
     );
   };
 
+  const goToLobby = () => {
+    setOverview(false);
+  };
+
+  const calculateTimeDifference = (startTime: number, endTime: number) => {
+    const start = new Date(startTime).getTime();
+    const end = new Date(endTime).getTime();
+    const timeDiff = Math.abs(end - start);
+
+    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+    return `${hours}:${minutes}:${seconds}`;
+  };
+
   return (
     <div className="App">
       <ToastContainer position="bottom-right" theme="dark" />
+
+      {/* Error */}
       {wsError && <h1>{wsError}</h1>}
 
+      {/* Main Page */}
       {!room && !wsError && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <h1>Welcome</h1>
@@ -200,17 +234,40 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {room && !wsError && !gameStarted && (
+      {/* Lobby */}
+      {room && !wsError && !gameStarted && !overview && (
         <>
           <h1>Room {room}</h1>
           <h3>Players</h3>
           <ul>
-            {playerList.map((player: Player, index: number) => (
-              <li key={index}>
-                {player.leader ? "👑" : ""}
-                {player.username}
-              </li>
-            ))}
+            {playerList
+              .filter((player: Player) => player.inGame)
+              .sort((a: Player, b: Player) => {
+                const checkedCellsA = a.checkedCells || 0;
+                const checkedCellsB = b.checkedCells || 0;
+
+                if (checkedCellsA !== checkedCellsB) {
+                  return checkedCellsB - checkedCellsA;
+                }
+                return b.bingo ? 1 : -1;
+              })
+              .map((player: Player, index: number) => (
+                <li key={index}>
+                  {player.leader ? "👑" : ""}
+                  {player.username + " "}
+                  <b>{" [In Game]"}</b>
+                </li>
+              ))}
+          </ul>
+          <ul style={{ opacity: 0.7 }}>
+            {playerList
+              .filter((player: Player) => !player.inGame)
+              .map((player: Player, index: number) => (
+                <li key={index}>
+                  {player.leader ? "👑" : ""}
+                  {player.username}
+                </li>
+              ))}
           </ul>
           <h3>Chat</h3>
           <ul>
@@ -242,7 +299,8 @@ const App: React.FC = () => {
         </>
       )}
 
-      {room && gameStarted && !wsError && (
+      {/* Game */}
+      {room && gameStarted && !wsError && !overview && (
         <div className="gameContainer">
           <div className="game">
             <h2>Game Board</h2>
@@ -286,13 +344,16 @@ const App: React.FC = () => {
               {playerList
                 .filter((player: Player) => player.inGame)
                 .sort((a: Player, b: Player) => {
-                  const checkedCellsA = a.checkedCells || 0;
-                  const checkedCellsB = b.checkedCells || 0;
+                  if (a.bingo && !b.bingo) {
+                    return -1;
+                  } else if (!a.bingo && b.bingo) {
+                    return 1;
+                  } else {
+                    const checkedCellsA = a.checkedCells || 0;
+                    const checkedCellsB = b.checkedCells || 0;
 
-                  if (checkedCellsA !== checkedCellsB) {
                     return checkedCellsB - checkedCellsA;
                   }
-                  return b.bingo ? 1 : -1;
                 })
                 .map((player: Player, index: number) => (
                   <li key={index}>
@@ -315,8 +376,33 @@ const App: React.FC = () => {
                 ))}
             </ul>
 
-            <button onClick={endGame}>End game</button>
+            {createdRoom && <button onClick={endGame}>End game</button>}
           </div>
+        </div>
+      )}
+
+      {/* Overview */}
+      {room && overview && !wsError && !gameStarted && (
+        <div>
+          <ol>
+            {leaderboard.map((topThree: TopThree, index: number) => (
+              <li key={index}>
+                <strong>{topThree.username}</strong>
+                {topThree.bingoTimestamp && topThree.gameTimestamp && (
+                  <span>
+                    {" "}
+                    - Game Time:{" "}
+                    {calculateTimeDifference(
+                      topThree.gameTimestamp,
+                      topThree.bingoTimestamp
+                    )}
+                  </span>
+                )}
+                <span> - Checked Cells: {topThree.checkedCells}</span>
+              </li>
+            ))}
+          </ol>
+          <button onClick={goToLobby}>Play again</button>
         </div>
       )}
     </div>
