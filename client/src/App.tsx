@@ -1,6 +1,8 @@
 // App.tsx
 import React, { useState, useEffect } from "react";
 import "./App.css";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ws = new WebSocket("ws://localhost:8080");
 
@@ -12,6 +14,8 @@ interface Message {
 interface Player {
   username: string;
   leader: boolean;
+  checkedCells?: number;
+  bingo?: boolean;
 }
 
 interface Cell {
@@ -36,6 +40,7 @@ const App: React.FC = () => {
   //Game
   const [board, setBoard] = useState<Cell[][]>([]);
   const [gameStarted, setGameStarted] = useState<boolean>(false);
+  const [bingo, setBingo] = useState<boolean>(false);
 
   useEffect(() => {
     ws.onopen = () => {
@@ -68,9 +73,14 @@ const App: React.FC = () => {
       } else if (data.type === "gameStarted") {
         setBoard(data.board);
         setGameStarted(true);
+      } else if (data.type === "board") {
+        setBoard(data.board);
+      } else if (data.type === "bingo") {
+        setBoard(data.board);
+        setBingo(true);
+        toast.success("BINGO!");
       } else if (data.type === "error") {
-        alert(data.message);
-        setWsError(data.message);
+        toast.error(data.message);
         setUsername("");
         setRoom("");
         setMessages([]);
@@ -130,8 +140,19 @@ const App: React.FC = () => {
     );
   };
 
+  const makeMove = (x: number, y: number) => {
+    ws.send(
+      JSON.stringify({
+        type: "move",
+        room: room,
+        value: { x, y },
+      })
+    );
+  };
+
   return (
     <div className="App">
+      <ToastContainer position="bottom-right" theme="dark" />
       {wsError && <h1>{wsError}</h1>}
 
       {!room && !wsError && (
@@ -170,7 +191,7 @@ const App: React.FC = () => {
           <h1>Room {room}</h1>
           <h3>Players</h3>
           <ul>
-            {playerList.map((player: player, index: number) => (
+            {playerList.map((player: Player, index: number) => (
               <li key={index}>
                 {player.leader ? "👑" : ""}
                 {player.username}
@@ -179,7 +200,7 @@ const App: React.FC = () => {
           </ul>
           <h3>Chat</h3>
           <ul>
-            {messages.map((message: message, index: number) => (
+            {messages.map((message: Message, index: number) => (
               <li key={index}>
                 {message.username ? `[${message.username}]: ` : ""}{" "}
                 {message.text}
@@ -206,21 +227,55 @@ const App: React.FC = () => {
       )}
 
       {room && gameStarted && !wsError && (
-        <div>
-          <h2>Game Board</h2>
-          <div className="game-board">
-            {board.map((row, rowIndex) => (
-              <div key={rowIndex} className="board-row">
-                {row.map((cell, columnIndex) => (
-                  <div
-                    key={columnIndex}
-                    className={`board-cell ${cell.checked ? "checked" : ""}`}
-                  >
-                    <span>{cell.value}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
+        <div className="gameContainer">
+          <div className="game">
+            <h2>Game Board</h2>
+            <div className="game-board">
+              {board.map((row, rowIndex) => (
+                <div key={rowIndex} className="board-row">
+                  {row.map((cell, columnIndex) => (
+                    <div
+                      key={columnIndex}
+                      className={`board-cell ${cell.checked ? "checked" : ""}`}
+                      onClick={() => makeMove(rowIndex, columnIndex)}
+                    >
+                      <span>{cell.value}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="sideBar">
+            <h3>Chat</h3>
+            <ul>
+              {messages.map((message: Message, index: number) => (
+                <li key={index}>
+                  {message.username ? `[${message.username}]: ` : ""}{" "}
+                  {message.text}
+                </li>
+              ))}
+            </ul>
+            <input
+              type="text"
+              placeholder="Text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+            <button onClick={sendMessage}>Send</button>
+
+            <h3>Players</h3>
+            <ul>
+              {playerList.map((player: Player, index: number) => (
+                <li key={index}>
+                  {player.leader ? "👑" : ""}
+                  {player.username + " "}
+                  {player.checkedCells}/{board.length * board.length}
+                  {player.bingo && " 🔥[BINGO]🔥"}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}

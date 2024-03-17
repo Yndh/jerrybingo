@@ -25,11 +25,18 @@
   border-radius: 25px;
 }
 
+.gameContainer {
+  display: flex;
+  width: 100%;
+  margin-left: 14rem;
+}
+
 .board-row {
   display: flex;
 }
 
 .board-cell {
+  position: relative;
   width: 150px;
   aspect-ratio: 1/1;
   background: #1f1f1f;
@@ -38,7 +45,30 @@
   justify-content: center;
   align-items: center;
   font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
 }
+
+.board-cell.checked::before,
+.board-cell.checked::after {
+  content: '';
+  position: absolute;
+  width: 70%;
+  height: 3px;
+  background-color: white;
+  /* Change color as desired */
+}
+
+.board-cell.checked::before {
+  transform: rotate(45deg);
+}
+
+.board-cell.checked::after {
+  transform: rotate(-45deg);
+}
+
 
 .board-cell span {
   width: 80%;

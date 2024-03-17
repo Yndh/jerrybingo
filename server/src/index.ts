@@ -6,6 +6,7 @@ const http = require("http");
 interface Client {
   ws: WebSocket;
   username: string;
+  bingo: boolean;
   board: Cell[][];
 }
 
@@ -36,6 +37,7 @@ wss.on("connection", (ws: WebSocket) => {
       room?: string;
       username?: string;
       text?: string;
+      value?: { x: number; y: number };
     } = JSON.parse(msg.toString());
 
     console.table(rooms);
@@ -58,6 +60,7 @@ wss.on("connection", (ws: WebSocket) => {
         rooms[code].clients.push({
           ws: ws,
           username: data.username,
+          bingo: false,
           board: [],
         });
         sendToRoom(code, {
@@ -80,6 +83,7 @@ wss.on("connection", (ws: WebSocket) => {
             {
               ws: ws,
               username: data.username,
+              bingo: false,
               board: [],
             },
           ],
@@ -152,6 +156,91 @@ wss.on("connection", (ws: WebSocket) => {
             client.ws
           );
         });
+      }
+    } else if (data.type === "move") {
+      if (data.room) {
+        const code: string = data.room;
+        const room = rooms[code];
+        if (!room) {
+          ws.send(JSON.stringify({ type: "error", message: "Room not found" }));
+          return;
+        }
+
+        if (!room.gameStarted) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Game must be started",
+            })
+          );
+          return;
+        }
+
+        const client = room.clients.find((client) => client.ws === ws);
+        if (!client) {
+          ws.send(
+            JSON.stringify({ type: "error", message: "Client not found" })
+          );
+          return;
+        }
+
+        if (!data.value) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Provide x and y",
+            })
+          );
+          return;
+        }
+
+        if (client.bingo) {
+          return;
+        }
+
+        const { x, y } = data.value;
+        const cell = client.board[x][y];
+
+        if (!cell.checked) {
+          cell.checked = true;
+        } else {
+          cell.checked = false;
+        }
+        sendToRoom(code, {
+          type: "message",
+          text: `${client.username} ${cell.checked ? "checked" : "unchecked"} ${
+            cell.value
+          }`,
+        });
+
+        const bingo = checkBoard(client.board);
+        if (bingo) {
+          client.bingo = true;
+          sendToClient(
+            code,
+            {
+              type: "bingo",
+              text: "",
+              board: client.board,
+            },
+            ws
+          );
+          sendToRoom(code, {
+            type: "message",
+            text: `${client.username} got a BINGO!`,
+          });
+          return;
+        }
+
+        sendToClient(
+          code,
+          {
+            type: "board",
+            text: "",
+            board: client.board,
+          },
+          ws
+        );
       }
     }
   });
@@ -233,6 +322,55 @@ const generateBoard = (size: number): Cell[][] => {
   return board;
 };
 
+const checkBoard = (board: Cell[][]) => {
+  const size = board.length;
+
+  for (let x = 0; x < size; x++) {
+    let row = true;
+    let col = true;
+
+    for (let y = 0; y < size; y++) {
+      if (!board[x][y].checked) {
+        row = false;
+      }
+      if (!board[y][x].checked) {
+        col = false;
+      }
+    }
+    if (row || col) {
+      return true;
+    }
+  }
+
+  let diagonal = true;
+  let antiDiagonal = true;
+  for (let x = 0; x < size; x++) {
+    if (!board[x][x].checked) {
+      diagonal = false;
+    }
+    if (!board[x][size - 1 - x].checked) {
+      antiDiagonal = false;
+    }
+  }
+  if (diagonal || antiDiagonal) {
+    return true;
+  }
+
+  return false;
+};
+
+const countChecked = (board: Cell[][]): number => {
+  let count = 0;
+  for (let i = 0; i < board.length; i++) {
+    for (let j = 0; j < board[i].length; j++) {
+      if (board[i][j].checked) {
+        count++;
+      }
+    }
+  }
+  return count;
+};
+
 const sendToRoom = (
   code: string,
   message: {
@@ -249,6 +387,8 @@ const sendToRoom = (
       return {
         username: client.username,
         leader: client.ws === room.leader ? true : false,
+        checkedCells: countChecked(client.board),
+        bingo: client.bingo,
       };
     });
     room.clients.forEach((client) => {
@@ -273,6 +413,8 @@ const sendToClient = (
     return {
       username: client.username,
       leader: client.ws === room.leader ? true : false,
+      checkedCells: countChecked(client.board),
+      bingo: client.bingo,
     };
   });
   clientWs.send(JSON.stringify({ ...message, playerList }));
