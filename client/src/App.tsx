@@ -1,6 +1,6 @@
 // App.tsx
 import React, { useState, useEffect } from "react";
-import "./App.css";
+import "./styles/App.scss";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -38,6 +38,8 @@ const App: React.FC = () => {
   //Lobby
   const [username, setUsername] = useState<string>("");
   const [roomCode, setRoomCode] = useState<string>("");
+  const [creatingRoom, setCreatingRoom] = useState<boolean>(false);
+  const [joiningRoom, setJoiningRoom] = useState<boolean>(false);
 
   //Room
   const [message, setMessage] = useState("");
@@ -86,6 +88,7 @@ const App: React.FC = () => {
       } else if (data.type === "gameStarted") {
         setBoard(data.board);
         setGameStarted(true);
+        setOverview(false);
       } else if (data.type === "board") {
         setBoard(data.board);
       } else if (data.type === "bingo") {
@@ -195,115 +198,156 @@ const App: React.FC = () => {
     return `${hours}:${minutes}:${seconds}`;
   };
 
+  const switchToCreatingRoom = () => {
+    setJoiningRoom(false);
+    setCreatingRoom(true);
+  };
+
+  const switchToJoingRoom = () => {
+    setCreatingRoom(false);
+    setJoiningRoom(true);
+  };
+
+  const backToMain = () => {
+    setCreatingRoom(false);
+    setJoiningRoom(false);
+  };
+
   return (
     <div className="App">
-      <ToastContainer position="bottom-right" theme="dark" />
-
       {/* Error */}
       {wsError && <h1>{wsError}</h1>}
 
       {/* Main Page */}
-      {!room && !wsError && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <h1>Welcome</h1>
-          <label htmlFor="usernameInput">Username</label>
+      {!room && !joiningRoom && !creatingRoom && !wsError && (
+        <div className="mainContainer">
+          <h1>Jerrdle</h1>
+          <button onClick={switchToJoingRoom}>🎮 Join room</button>
+          <button onClick={switchToCreatingRoom}>🔨 Create room</button>
+        </div>
+      )}
+
+      {/* Joining Room */}
+      {!room && joiningRoom && !creatingRoom && !wsError && (
+        <div className="mainContainer">
+          <h1>Join room</h1>
           <input
             type="text"
             id="usernameInput"
-            placeholder="Username"
+            placeholder="Enter your nickname"
             onChange={(e) => setUsername(e.target.value)}
           />
-          <label htmlFor="roomCode">Room Code</label>
           <input
             type="text"
             id="roomCode"
-            placeholder="Room Code"
+            placeholder="Enter room code"
             onChange={(e) => setRoomCode(e.target.value)}
           />
-          <div style={{ display: "flex", gap: 15 }}>
-            <button
-              onClick={joinRoom}
-              disabled={!(roomCode.trim() !== "" && username.trim() !== "")}
-            >
-              Join room
-            </button>
-            <button onClick={createRoom} disabled={username.trim() == ""}>
-              Create room
-            </button>
-          </div>
+          <button
+            onClick={joinRoom}
+            disabled={!(roomCode.trim() !== "" && username.trim() !== "")}
+          >
+            🚪 Join room
+          </button>
+          <button onClick={backToMain}>⬅ Go back</button>
+        </div>
+      )}
+
+      {/* Creating Room */}
+      {!room && !joiningRoom && creatingRoom && !wsError && (
+        <div className="mainContainer">
+          <h1>New room</h1>
+          <input
+            type="text"
+            id="usernameInput"
+            placeholder="Enter your nickname"
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <button onClick={createRoom} disabled={username.trim() == ""}>
+            🔨 Create room
+          </button>
+          <button onClick={backToMain}>⬅ Go back</button>
         </div>
       )}
 
       {/* Lobby */}
       {room && !wsError && !gameStarted && !overview && (
-        <>
-          <h1>Room {room}</h1>
-          <h3>Players</h3>
-          <ul>
-            {playerList
-              .filter((player: Player) => player.inGame)
-              .sort((a: Player, b: Player) => {
-                const checkedCellsA = a.checkedCells || 0;
-                const checkedCellsB = b.checkedCells || 0;
+        <div className="roomContainer">
+          <h1>
+            Room <span className="code">#{room}</span>
+          </h1>
+          <div className="container players">
+            <h3>👥 Players</h3>
+            <ul>
+              {playerList
+                .filter((player: Player) => player.inGame)
+                .sort((a: Player, b: Player) => {
+                  const checkedCellsA = a.checkedCells || 0;
+                  const checkedCellsB = b.checkedCells || 0;
 
-                if (checkedCellsA !== checkedCellsB) {
-                  return checkedCellsB - checkedCellsA;
-                }
-                return b.bingo ? 1 : -1;
-              })
-              .map((player: Player, index: number) => (
+                  if (checkedCellsA !== checkedCellsB) {
+                    return checkedCellsB - checkedCellsA;
+                  }
+                  return b.bingo ? 1 : -1;
+                })
+                .map((player: Player, index: number) => (
+                  <li key={index}>
+                    {player.leader ? "👑" : ""}
+                    {player.username + " "}
+                    <b>{" [In Game]"}</b>
+                  </li>
+                ))}
+              {playerList
+                .filter((player: Player) => !player.inGame)
+                .map((player: Player, index: number) => (
+                  <li key={index}>
+                    {player.leader ? "👑" : ""}
+                    {player.username}
+                  </li>
+                ))}
+            </ul>
+          </div>
+          <div className="container chat">
+            <h3>💬 Chat</h3>
+            <ul className="chat">
+              {messages.map((message: Message, index: number) => (
                 <li key={index}>
-                  {player.leader ? "👑" : ""}
-                  {player.username + " "}
-                  <b>{" [In Game]"}</b>
+                  <span className="username">
+                    {message.username ? `[${message.username}]: ` : ""}{" "}
+                  </span>
+                  <span className="message">{message.text}</span>
                 </li>
               ))}
-          </ul>
-          <ul style={{ opacity: 0.7 }}>
-            {playerList
-              .filter((player: Player) => !player.inGame)
-              .map((player: Player, index: number) => (
-                <li key={index}>
-                  {player.leader ? "👑" : ""}
-                  {player.username}
-                </li>
-              ))}
-          </ul>
-          <h3>Chat</h3>
-          <ul>
-            {messages.map((message: Message, index: number) => (
-              <li key={index}>
-                {message.username ? `[${message.username}]: ` : ""}{" "}
-                {message.text}
-              </li>
-            ))}
-          </ul>
-          <input
-            type="text"
-            placeholder="Text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-          />
-          <button onClick={sendMessage}>Send</button>
+            </ul>
+          </div>
+          <div className="messageContainer">
+            <input
+              type="text"
+              placeholder="Enter your message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+            <button onClick={sendMessage}>✉ Send</button>
+          </div>
 
-          {createdRoom ? (
+          {createdRoom && (
             <button
               style={{ width: "100%", marginTop: 25 }}
               onClick={startGame}
             >
-              Start Game
+              🎮 Start Game
             </button>
-          ) : (
-            <h4>Waiting for leader to start game...</h4>
           )}
-        </>
+
+          <button>🚪 Leave room</button>
+        </div>
       )}
 
       {/* Game */}
       {room && gameStarted && !wsError && !overview && (
         <div className="gameContainer">
           <div className="game">
-            <h2>Game Board</h2>
+            <h2>🔢 Bingo</h2>
             <div className="game-board">
               {board.map((row, rowIndex) => (
                 <div key={rowIndex} className="board-row">
@@ -321,88 +365,91 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <div className="sideBar">
-            <h3>Chat</h3>
-            <ul>
-              {messages.map((message: Message, index: number) => (
-                <li key={index}>
-                  {message.username ? `[${message.username}]: ` : ""}{" "}
-                  {message.text}
-                </li>
-              ))}
-            </ul>
-            <input
-              type="text"
-              placeholder="Text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <button onClick={sendMessage}>Send</button>
-
-            <h3>Players</h3>
-            <ul>
-              {playerList
-                .filter((player: Player) => player.inGame)
-                .sort((a: Player, b: Player) => {
-                  if (a.bingo && !b.bingo) {
-                    return -1;
-                  } else if (!a.bingo && b.bingo) {
-                    return 1;
-                  } else {
+          <div className="sidebar">
+            <div className="container players">
+              <h3>👥 Players</h3>
+              <ul>
+                {playerList
+                  .filter((player: Player) => player.inGame)
+                  .sort((a: Player, b: Player) => {
                     const checkedCellsA = a.checkedCells || 0;
                     const checkedCellsB = b.checkedCells || 0;
 
-                    return checkedCellsB - checkedCellsA;
-                  }
-                })
-                .map((player: Player, index: number) => (
+                    if (checkedCellsA !== checkedCellsB) {
+                      return checkedCellsB - checkedCellsA;
+                    }
+                    return b.bingo ? 1 : -1;
+                  })
+                  .map((player: Player, index: number) => (
+                    <li key={index}>
+                      {player.leader ? "👑" : ""}
+                      {player.username + " "}
+                      <b>{" [In Game]"}</b>
+                    </li>
+                  ))}
+                {playerList
+                  .filter((player: Player) => !player.inGame)
+                  .map((player: Player, index: number) => (
+                    <li key={index}>
+                      {player.leader ? "👑" : ""}
+                      {player.username}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+            <div className="container chat">
+              <h3>💬 Chat</h3>
+              <ul className="chat">
+                {messages.map((message: Message, index: number) => (
                   <li key={index}>
-                    {player.leader ? "👑" : ""}
-                    {player.username + " "}
-                    {player.checkedCells}/{board.length * board.length}
-                    {player.bingo && " 🔥[BINGO]🔥"}
+                    <span className="username">
+                      {message.username ? `[${message.username}]: ` : ""}{" "}
+                    </span>
+                    <span className="message">{message.text}</span>
                   </li>
                 ))}
-            </ul>
-            <ul style={{ opacity: 0.7 }}>
-              {playerList
-                .filter((player: Player) => !player.inGame)
-                .map((player: Player, index: number) => (
-                  <li key={index}>
-                    {player.leader ? "👑" : ""}
-                    {player.username}
-                    {" [Lobby]"}
-                  </li>
-                ))}
-            </ul>
+              </ul>
+            </div>
+            <div className="messageContainer">
+              <input
+                type="text"
+                placeholder="Enter your message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+              <button onClick={sendMessage}>✉ Send</button>
+            </div>
 
-            {createdRoom && <button onClick={endGame}>End game</button>}
+            {createdRoom && <button onClick={endGame}>⛔ End game</button>}
           </div>
         </div>
       )}
 
       {/* Overview */}
       {room && overview && !wsError && !gameStarted && (
-        <div>
+        <div className="overviewContainer">
           <ol>
-            {leaderboard.map((topThree: TopThree, index: number) => (
+            {leaderboard.map((player: TopThree, index: number) => (
               <li key={index}>
-                <strong>{topThree.username}</strong>
-                {topThree.bingoTimestamp && topThree.gameTimestamp && (
-                  <span>
-                    {" "}
-                    - Game Time:{" "}
+                <h1>
+                  {index + 1 == 1 ? "🏆" : index + 1 == 2 ? "🥈" : "🥉"}#
+                  {index + 1} {player.username}
+                </h1>
+                {player.bingo && <p>🟦 BINGO!</p>}
+                <p>🔢 {player.checkedCells}/25</p>
+                {player.bingoTimestamp && player.gameTimestamp && (
+                  <p>
+                    🕧{" "}
                     {calculateTimeDifference(
-                      topThree.gameTimestamp,
-                      topThree.bingoTimestamp
+                      player.gameTimestamp,
+                      player.bingoTimestamp
                     )}
-                  </span>
+                  </p>
                 )}
-                <span> - Checked Cells: {topThree.checkedCells}</span>
               </li>
             ))}
           </ol>
-          <button onClick={goToLobby}>Play again</button>
+          <button onClick={goToLobby}>🎮 Play again</button>
         </div>
       )}
     </div>
