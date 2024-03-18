@@ -314,57 +314,13 @@ wss.on("connection", (ws: WebSocket) => {
         });
         room.clients.map((client) => (client.bingo = false));
       }
+    } else if (data.type === "leave") {
+      removeUser(ws);
     }
   });
 
   ws.on("close", () => {
-    // Handle client leave
-    const clientRooms = Object.keys(rooms).filter((code) =>
-      rooms[code].clients.some((client) => client.ws === ws)
-    );
-
-    clientRooms.forEach((code) => {
-      const room = rooms[code];
-      const clientIndex = room.clients.findIndex((client) => client.ws === ws);
-      if (clientIndex === -1) {
-        return;
-      }
-
-      const clientToRemove = room.clients[clientIndex];
-      room.clients.splice(clientIndex, 1);
-
-      sendToRoom(code, {
-        type: "message",
-        text: `${clientToRemove.username} left the room`,
-      });
-
-      if (clientToRemove.ws === room.leader) {
-        if (room.clients.length == 0) {
-          delete rooms[code];
-          return;
-        }
-
-        room.leader = room.clients[0].ws;
-        const leader = room.clients[0];
-
-        sendToClient(
-          code,
-          {
-            type: "permission",
-            text: "You got promoted to room leader",
-          },
-          leader.ws
-        );
-        sendToRoom(
-          code,
-          {
-            type: "message",
-            text: `${leader.username} got promoted to room leader`,
-          },
-          leader.ws
-        );
-      }
-    });
+    removeUser(ws);
   });
 });
 
@@ -538,6 +494,56 @@ const sendToClient = (
     };
   });
   clientWs.send(JSON.stringify({ ...message, playerList }));
+};
+
+const removeUser = (ws: WebSocket) => {
+  // Handle client leave
+  const clientRooms = Object.keys(rooms).filter((code) =>
+    rooms[code].clients.some((client) => client.ws === ws)
+  );
+
+  clientRooms.forEach((code) => {
+    const room = rooms[code];
+    const clientIndex = room.clients.findIndex((client) => client.ws === ws);
+    if (clientIndex === -1) {
+      return;
+    }
+
+    const clientToRemove = room.clients[clientIndex];
+    room.clients.splice(clientIndex, 1);
+
+    sendToRoom(code, {
+      type: "message",
+      text: `${clientToRemove.username} left the room`,
+    });
+
+    if (clientToRemove.ws === room.leader) {
+      if (room.clients.length == 0) {
+        delete rooms[code];
+        return;
+      }
+
+      room.leader = room.clients[0].ws;
+      const leader = room.clients[0];
+
+      sendToClient(
+        code,
+        {
+          type: "permission",
+          text: "You got promoted to room leader",
+        },
+        leader.ws
+      );
+      sendToRoom(
+        code,
+        {
+          type: "message",
+          text: `${leader.username} got promoted to room leader`,
+        },
+        leader.ws
+      );
+    }
+  });
 };
 
 app.get("/", (req: Request, res: Response) => {

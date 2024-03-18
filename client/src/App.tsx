@@ -104,8 +104,6 @@ const App: React.FC = () => {
         setOverview(true);
       } else if (data.type === "error") {
         toast.error(data.message);
-        setUsername("");
-        setRoom("");
         setMessages([]);
       }
     };
@@ -182,6 +180,19 @@ const App: React.FC = () => {
     );
   };
 
+  const leaveRoom = () => {
+    setRoom("");
+    setUsername("");
+    setMessages([]);
+    setPlayerList([]);
+    setCreatedRoom(false);
+    ws.send(
+      JSON.stringify({
+        type: "leave",
+      })
+    );
+  };
+
   const goToLobby = () => {
     setOverview(false);
   };
@@ -222,8 +233,10 @@ const App: React.FC = () => {
       {!room && !joiningRoom && !creatingRoom && !wsError && (
         <div className="mainContainer">
           <h1>Jerrdle</h1>
-          <button onClick={switchToJoingRoom}>🎮 Join room</button>
-          <button onClick={switchToCreatingRoom}>🔨 Create room</button>
+          <div className="inputContainer">
+            <button onClick={switchToJoingRoom}>🎮 Join Room</button>
+            <button onClick={switchToCreatingRoom}>🔨 Create Room</button>
+          </div>
         </div>
       )}
 
@@ -231,25 +244,29 @@ const App: React.FC = () => {
       {!room && joiningRoom && !creatingRoom && !wsError && (
         <div className="mainContainer">
           <h1>Join room</h1>
-          <input
-            type="text"
-            id="usernameInput"
-            placeholder="Enter your nickname"
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <input
-            type="text"
-            id="roomCode"
-            placeholder="Enter room code"
-            onChange={(e) => setRoomCode(e.target.value)}
-          />
-          <button
-            onClick={joinRoom}
-            disabled={!(roomCode.trim() !== "" && username.trim() !== "")}
-          >
-            🚪 Join room
-          </button>
-          <button onClick={backToMain}>⬅ Go back</button>
+          <div className="inputContainer">
+            <input
+              type="text"
+              id="usernameInput"
+              placeholder="Enter your nickname"
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            <input
+              type="text"
+              id="roomCode"
+              placeholder="Enter room code"
+              onChange={(e) => setRoomCode(e.target.value)}
+            />
+          </div>
+          <div className="inputContainer">
+            <button
+              onClick={joinRoom}
+              disabled={!(roomCode.trim() !== "" && username.trim() !== "")}
+            >
+              🚪 Join Room
+            </button>
+            <button onClick={backToMain}>⬅ Go Back</button>
+          </div>
         </div>
       )}
 
@@ -263,10 +280,12 @@ const App: React.FC = () => {
             placeholder="Enter your nickname"
             onChange={(e) => setUsername(e.target.value)}
           />
-          <button onClick={createRoom} disabled={username.trim() == ""}>
-            🔨 Create room
-          </button>
-          <button onClick={backToMain}>⬅ Go back</button>
+          <div className="inputContainer">
+            <button onClick={createRoom} disabled={username.trim() == ""}>
+              🔨 Create Room
+            </button>
+            <button onClick={backToMain}>⬅ Go Back</button>
+          </div>
         </div>
       )}
 
@@ -330,16 +349,18 @@ const App: React.FC = () => {
             <button onClick={sendMessage}>✉ Send</button>
           </div>
 
-          {createdRoom && (
-            <button
-              style={{ width: "100%", marginTop: 25 }}
-              onClick={startGame}
-            >
-              🎮 Start Game
-            </button>
-          )}
+          <div className="inputContainer">
+            {createdRoom && (
+              <button
+                style={{ width: "100%", marginTop: 25 }}
+                onClick={startGame}
+              >
+                🎮 Start Game
+              </button>
+            )}
 
-          <button>🚪 Leave room</button>
+            <button onClick={leaveRoom}>🚪 Leave Room</button>
+          </div>
         </div>
       )}
 
@@ -420,7 +441,10 @@ const App: React.FC = () => {
               <button onClick={sendMessage}>✉ Send</button>
             </div>
 
-            {createdRoom && <button onClick={endGame}>⛔ End game</button>}
+            <div className="inputContainer">
+              {createdRoom && <button onClick={endGame}>⛔ End game</button>}
+              <button onClick={leaveRoom}>🚪 Leave room</button>
+            </div>
           </div>
         </div>
       )}
