@@ -310,6 +310,53 @@ ul.chat {
 }
 
 
+.modalContainer {
+  position: absolute;
+  width: 100%;
+  height: 100vh;
+  left: 0;
+  top: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  backdrop-filter: blur(2px);
+
+  .modal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    min-width: 200px;
+    max-width: 500px;
+    gap: 10px;
+
+    text-align: center;
+    background: $primary-color;
+    border: 1px solid $accent-color;
+    border-radius: 10px;
+    padding: 20px;
+
+    .buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: row;
+      width: 100%;
+      gap: 10px;
+
+      button {
+        width: 100%;
+      }
+    }
+
+    h1 {
+      font-size: 35px;
+    }
+  }
+}
+
 @media screen and (max-width: 768px) {
 
   .gameContainer {

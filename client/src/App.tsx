@@ -39,24 +39,29 @@ const App: React.FC = () => {
   const [roomCode, setRoomCode] = useState<string>("");
   const [creatingRoom, setCreatingRoom] = useState<boolean>(false);
   const [joiningRoom, setJoiningRoom] = useState<boolean>(false);
-  const [clientId, setClientId] = useState<string>("");
 
   //Room
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [room, setRoom] = useState<string>("");
-  const [playerList, setPlayerList] = useState<Player[]>([]);
   const [createdRoom, setCreatedRoom] = useState<boolean>(false);
+  const [playerList, setPlayerList] = useState<Player[]>([]);
+  const [userToKick, setUserToKick] = useState<string>("");
+  const [clientIdToKick, setClientIdToKick] = useState<string>("");
 
   //Game
   const [board, setBoard] = useState<Cell[][]>([]);
   const [gameStarted, setGameStarted] = useState<boolean>(false);
-  const [bingo, setBingo] = useState<boolean>(false);
   const [sideBarOpen, setSideBarOpen] = useState<boolean>(false);
+  const [bingo, setBingo] = useState<boolean>(false);
 
   // Overview
   const [overview, setOverview] = useState<boolean>(false);
   const [leaderboard, setLeaderboard] = useState<TopThree[]>([]);
+
+  // Other
+  const [clientId, setClientId] = useState<string>("");
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     ws.onopen = () => {
@@ -192,16 +197,21 @@ const App: React.FC = () => {
     );
   };
 
-  const kickFromRoom = (clientId: string) => {
-    alert(`Wanna kick ${clientId}`);
+  const kickFromRoom = (clientId: string, username: string) => {
+    setModalOpen(true);
+    setUserToKick(username);
+    setClientIdToKick(clientId);
+  };
 
+  const kickUser = () => {
     ws.send(
       JSON.stringify({
         type: "kick",
         room: room,
-        clientId: clientId,
+        clientId: clientIdToKick,
       })
     );
+    setModalOpen(false);
   };
 
   const reset = () => {
@@ -303,7 +313,7 @@ const App: React.FC = () => {
             >
               🚪 Join Room
             </button>
-            <button onClick={backToMain}>⬅ Go Back</button>
+            <button onClick={backToMain}>⬅️ Go Back</button>
           </div>
         </div>
       )}
@@ -322,7 +332,7 @@ const App: React.FC = () => {
             <button onClick={createRoom} disabled={username.trim() == ""}>
               🔨 Create Room
             </button>
-            <button onClick={backToMain}>⬅ Go Back</button>
+            <button onClick={backToMain}>⬅️ Go Back</button>
           </div>
         </div>
       )}
@@ -360,7 +370,7 @@ const App: React.FC = () => {
                         createdRoom
                           ? player.leader
                             ? ""
-                            : kickFromRoom(player.id)
+                            : kickFromRoom(player.id, player.username)
                           : ""
                       }
                     >
@@ -384,7 +394,7 @@ const App: React.FC = () => {
                         createdRoom
                           ? player.leader
                             ? ""
-                            : kickFromRoom(player.id)
+                            : kickFromRoom(player.id, player.username)
                           : ""
                       }
                     >
@@ -414,7 +424,7 @@ const App: React.FC = () => {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
             />
-            <button onClick={sendMessage}>✉ Send</button>
+            <button onClick={sendMessage}>✉️ Send</button>
           </div>
 
           <div className="inputContainer">
@@ -488,7 +498,7 @@ const App: React.FC = () => {
                           createdRoom
                             ? player.leader
                               ? ""
-                              : kickFromRoom(player.id)
+                              : kickFromRoom(player.id, player.username)
                             : ""
                         }
                       >
@@ -513,7 +523,7 @@ const App: React.FC = () => {
                           createdRoom
                             ? player.leader
                               ? ""
-                              : kickFromRoom(player.id)
+                              : kickFromRoom(player.id, player.username)
                             : ""
                         }
                       >
@@ -544,7 +554,7 @@ const App: React.FC = () => {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
-              <button onClick={sendMessage}>✉ Send</button>
+              <button onClick={sendMessage}>✉️ Send</button>
             </div>
 
             <div className="inputContainer">
@@ -580,6 +590,20 @@ const App: React.FC = () => {
             ))}
           </ol>
           <button onClick={goToLobby}>🎮 Play again</button>
+        </div>
+      )}
+
+      {modalOpen && (
+        <div className="modalContainer">
+          <div className="modal">
+            <h1>
+              Are you sure you want to kick 👤 {userToKick} from the room?
+            </h1>
+            <div className="buttons">
+              <button onClick={() => setModalOpen(false)}>❌ Cancel</button>
+              <button onClick={kickUser}>👢 Kick User</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
