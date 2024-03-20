@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./styles/App.scss";
 import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 
 const ws = new WebSocket("ws://localhost:8080");
 
@@ -11,6 +10,7 @@ interface Message {
 }
 
 interface Player {
+  id: string;
   username: string;
   leader: boolean;
   inGame: boolean;
@@ -31,11 +31,6 @@ interface TopThree {
   checkedCells: number;
 }
 
-interface Clients {
-  id: string, 
-  username: string
-}
-
 const App: React.FC = () => {
   const [wsError, setWsError] = useState<string>("");
 
@@ -44,8 +39,7 @@ const App: React.FC = () => {
   const [roomCode, setRoomCode] = useState<string>("");
   const [creatingRoom, setCreatingRoom] = useState<boolean>(false);
   const [joiningRoom, setJoiningRoom] = useState<boolean>(false);
-  const [clientId, setClientId] = useState<string>("")
-  const [clients, setClients] = useState<Clients[]>([])
+  const [clientId, setClientId] = useState<string>("");
 
   //Room
   const [message, setMessage] = useState("");
@@ -72,31 +66,26 @@ const App: React.FC = () => {
       const data = JSON.parse(event.data);
 
       console.table(data);
+      console.table(data.playerList);
 
       if (data.type === "message") {
-        console.table(data);
         setMessages((prevMessages) => [
           ...prevMessages,
           { username: data.username, text: data.text },
         ]);
         setPlayerList(data.playerList);
       } else if (data.type === "permission") {
-        console.table(data);
         setCreatedRoom(true);
         setMessages((prevMessages) => [
           ...prevMessages,
-          { username: data.username, text: data.text },
+          { username: username, text: data.text },
         ]);
         setPlayerList(data.playerList);
       } else if (data.type === "roomCode") {
         setRoom(data.roomCode);
         setMessages([]);
-      } else if (data.type === "clientId") {
-        setClientId(data.client.id)
-        console.table(clientId)
-      } else if (data.type === "newClientId") {
-        setClients((prevClients) => [...prevClients, { id: data.client.id, username: data.client.username}])
-        console.table(clients)
+        setPlayerList(data.playerList);
+        setClientId(data.clientId);
       } else if (data.type === "gameStarted") {
         setBoard(data.board);
         setGameStarted(true);
@@ -107,6 +96,8 @@ const App: React.FC = () => {
         setBoard(data.board);
         setBingo(true);
         toast.success("BINGO!");
+      } else if (data.type === "check") {
+        setPlayerList(data.playerList);
       } else if (data.type === "gameEnded") {
         setBoard([]);
         setBingo(false);
@@ -115,7 +106,7 @@ const App: React.FC = () => {
         setPlayerList(data.playerList);
         setOverview(true);
       } else if (data.type === "leave") {
-        reset()
+        reset();
       } else if (data.type === "error") {
         toast.error(data.message);
         setMessages([]);
@@ -123,14 +114,14 @@ const App: React.FC = () => {
     };
 
     ws.onclose = () => {
-      setWsError("Conenction closed");
+      setWsError("You have been disconnected");
+      reset();
     };
   }, []);
 
   const createRoom = () => {
     setCreatedRoom(true);
     ws.send(JSON.stringify({ type: "join", username: username }));
-    setPlayerList([{ username, leader: true, inGame: false }]);
   };
 
   const joinRoom = () => {
@@ -141,9 +132,6 @@ const App: React.FC = () => {
     ws.send(
       JSON.stringify({ type: "join", username: username, room: roomCode })
     );
-    setRoom(roomCode);
-    setRoomCode("");
-    setMessages([]);
   };
 
   const sendMessage = () => {
@@ -198,24 +186,36 @@ const App: React.FC = () => {
     ws.send(
       JSON.stringify({
         type: "leave",
-        room: room
+        room: room,
+      })
+    );
+  };
+
+  const kickFromRoom = (clientId: string) => {
+    alert(`Wanna kick ${clientId}`);
+
+    ws.send(
+      JSON.stringify({
+        type: "kick",
+        room: room,
+        clientId: clientId,
       })
     );
   };
 
   const reset = () => {
-    setCreatedRoom(false)
-    setRoom("")
-    setMessages([])
-    setMessage("")
-    setBoard([])
-    setGameStarted(false)
-    setBingo(false)
-    setCreatingRoom(false)
-    setJoiningRoom(true)
-    setLeaderboard([])
-    setOverview(false)
-  }
+    setCreatedRoom(false);
+    setRoom("");
+    setMessages([]);
+    setMessage("");
+    setBoard([]);
+    setGameStarted(false);
+    setBingo(false);
+    setCreatingRoom(false);
+    setJoiningRoom(true);
+    setLeaderboard([]);
+    setOverview(false);
+  };
 
   const goToLobby = () => {
     setOverview(false);
@@ -248,10 +248,19 @@ const App: React.FC = () => {
     setJoiningRoom(false);
   };
 
+  const refreshPage = () => {
+    window.location.reload();
+  };
+
   return (
     <div className="App">
       {/* Error */}
-      {wsError && <h1>{wsError}</h1>}
+      {wsError && (
+        <div className="mainContainer">
+          <h1>{wsError}</h1>
+          <button onClick={refreshPage}>🔁 Refresh</button>
+        </div>
+      )}
 
       {/* Main Page */}
       {!room && !joiningRoom && !creatingRoom && !wsError && (
@@ -335,8 +344,21 @@ const App: React.FC = () => {
                 })
                 .map((player: Player, index: number) => (
                   <li key={index}>
-                    {player.leader ? "👑" : ""}
-                    <span className="username">
+                    {player.leader ? "👑" : "👤"}
+                    <span
+                      className={
+                        createdRoom
+                          ? `username ${player.leader ? "leader" : ""}`
+                          : ""
+                      }
+                      onClick={() =>
+                        createdRoom
+                          ? player.leader
+                            ? ""
+                            : kickFromRoom(player.id)
+                          : ""
+                      }
+                    >
                       {player.username + " "}
                       <b>{" [In Game]"}</b>
                     </span>
@@ -346,8 +368,21 @@ const App: React.FC = () => {
                 .filter((player: Player) => !player.inGame)
                 .map((player: Player, index: number) => (
                   <li key={index}>
-                    {player.leader ? "👑" : ""}
-                    <span className="username">
+                    {player.leader ? "👑" : "👤"}
+                    <span
+                      className={
+                        createdRoom
+                          ? `username ${player.leader ? "leader" : ""}`
+                          : ""
+                      }
+                      onClick={() =>
+                        createdRoom
+                          ? player.leader
+                            ? ""
+                            : kickFromRoom(player.id)
+                          : ""
+                      }
+                    >
                       {player.username}
                     </span>
                   </li>
@@ -431,10 +466,27 @@ const App: React.FC = () => {
                   })
                   .map((player: Player, index: number) => (
                     <li key={index}>
-                      {player.leader ? "👑" : ""}
-                      <span className="username">
+                      {player.leader ? "👑" : "👤"}
+                      <span
+                        className={
+                          createdRoom
+                            ? `username ${player.leader ? "leader" : ""}`
+                            : ""
+                        }
+                        onClick={() =>
+                          createdRoom
+                            ? player.leader
+                              ? ""
+                              : kickFromRoom(player.id)
+                            : ""
+                        }
+                      >
                         {player.username + " "}
-                        <b>{" [In Game]"}</b>
+
+                        <b>
+                          {" [In Game] "}
+                          {player.checkedCells}/25
+                        </b>
                       </span>
                     </li>
                   ))}
@@ -442,8 +494,21 @@ const App: React.FC = () => {
                   .filter((player: Player) => !player.inGame)
                   .map((player: Player, index: number) => (
                     <li key={index}>
-                      {player.leader ? "👑" : ""}
-                      <span className="username">
+                      {player.leader ? "👑" : "👤"}
+                      <span
+                        className={
+                          createdRoom
+                            ? `username ${player.leader ? "leader" : ""}`
+                            : ""
+                        }
+                        onClick={() =>
+                          createdRoom
+                            ? player.leader
+                              ? ""
+                              : kickFromRoom(player.id)
+                            : ""
+                        }
+                      >
                         {player.username}
                       </span>
                     </li>

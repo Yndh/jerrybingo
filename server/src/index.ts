@@ -41,11 +41,8 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const rooms: { [key: string]: Room } = {};
-let clientCounter: number = 0
 
 wss.on("connection", (ws: WebSocket) => {
-  clientCounter++
-  
   ws.on("message", (msg: WebSocket.Data) => {
     const data: {
       type: string;
@@ -53,10 +50,11 @@ wss.on("connection", (ws: WebSocket) => {
       username?: string;
       text?: string;
       value?: { x: number; y: number };
+      clientId?: string;
     } = JSON.parse(msg.toString());
-    
+
     console.table(rooms);
-    
+
     if (data.type === "join") {
       if (data.room) {
         // Join Room
@@ -68,11 +66,11 @@ wss.on("connection", (ws: WebSocket) => {
         if (!data.username || data.username.trim() == "") {
           ws.send(
             JSON.stringify({ type: "error", message: "No username provided" })
-            );
-            return;
-          }
-          const clientId = generateClientId()
-          
+          );
+          return;
+        }
+        const clientId = generateClientId();
+
         rooms[code].clients.push({
           id: clientId,
           ws: ws,
@@ -81,23 +79,14 @@ wss.on("connection", (ws: WebSocket) => {
           bingo: false,
           board: [],
         });
-        sendToClient(code, {
-          type: "clientId",
-          text: "",
-          client: {
-            id: clientId,
-            username: data.username
-          }
-        }, ws)
-
-        sendToClient(code, {
-          type: "newClientId",
-          text: "",
-          client: {
-            id: clientId,
-            username: data.username
-          }
-        }, rooms[code].leader)
+        ws.send(
+          JSON.stringify({
+            type: "roomCode",
+            roomCode: code,
+            clientId: clientId,
+            playerList: getPlayerList(rooms[code]),
+          })
+        );
 
         sendToRoom(code, {
           type: "message",
@@ -113,7 +102,7 @@ wss.on("connection", (ws: WebSocket) => {
 
         // Create New Room
         const code: string = generateRoomCode();
-        const clientId = generateClientId()
+        const clientId = generateClientId();
         rooms[code] = {
           leader: ws,
           clients: [
@@ -129,7 +118,14 @@ wss.on("connection", (ws: WebSocket) => {
           roomCode: code,
           gameStarted: false,
         };
-        ws.send(JSON.stringify({ type: "roomCode", roomCode: code, clientId: clientId }));
+        ws.send(
+          JSON.stringify({
+            type: "roomCode",
+            roomCode: code,
+            clientId: clientId,
+            playerList: getPlayerList(rooms[code]),
+          })
+        );
       }
     } else if (data.type === "message") {
       if (data.room && data.text) {
@@ -253,7 +249,7 @@ wss.on("connection", (ws: WebSocket) => {
           cell.checked = false;
         }
         sendToRoom(code, {
-          type: "message",
+          type: "check",
           text: `${client.username} ${cell.checked ? "checked" : "unchecked"} ${
             cell.value
           }`,
@@ -341,7 +337,7 @@ wss.on("connection", (ws: WebSocket) => {
         room.clients.map((client) => (client.bingo = false));
       }
     } else if (data.type === "leave") {
-      if(data.room){
+      if (data.room) {
         const code = data.room;
         const room = rooms[code];
         if (!room) {
@@ -350,22 +346,69 @@ wss.on("connection", (ws: WebSocket) => {
         }
 
         removeUser(ws);
-        sendToClient(code, {
-          type: "leave",
-          text: "You have successfully left the room"
-        }, ws)
+        sendToClient(
+          code,
+          {
+            type: "leave",
+            text: "You have successfully left the room",
+          },
+          ws
+        );
       }
-    } else if (data.type === "kick"){
-      if(data.room){
-        const code = data.room
-        const room = rooms[code]
-        if(!room){
-          ws.send(JSON.stringify({
-            type: "error",
-            message: "Room not found"
-          }))
+    } else if (data.type === "kick") {
+      if (data.room) {
+        const code = data.room;
+        const room = rooms[code];
+        const clientId = data.clientId;
+        if (!room) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Room not found",
+            })
+          );
           return;
         }
+
+        if (ws !== room.leader) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Only leader can kick players",
+            })
+          );
+          return;
+        }
+
+        if (!clientId) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Provide client id",
+            })
+          );
+        }
+
+        const clientToKick = room.clients.find(
+          (client) => client.id === clientId
+        );
+        if (!clientToKick) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Client not found",
+            })
+          );
+          return;
+        }
+
+        removeUser(clientToKick.ws);
+        clientToKick.ws.close();
+
+        sendToRoom(code, {
+          type: "message",
+          text: `${clientToKick.username} got kicked from the room`,
+        });
       }
     }
   });
@@ -375,9 +418,15 @@ wss.on("connection", (ws: WebSocket) => {
   });
 });
 
-const generateClientId = (): string => { 
-  return `client${clientCounter}`;
-}
+const generateClientId = (): string => {
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < 10; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+};
 
 const generateRoomCode = (): string => {
   const code: string = Math.floor(10000 + Math.random() * 90000).toString();
@@ -499,6 +548,20 @@ const getTopThreePlayers = (room: Room): TopThree[] => {
   return topThree;
 };
 
+const getPlayerList = (room: Room) => {
+  const playerList = room.clients.map((client) => {
+    return {
+      id: client.id,
+      username: client.username,
+      leader: client.ws === room.leader ? true : false,
+      inGame: client.inGame,
+      checkedCells: countChecked(client.board),
+      bingo: client.bingo,
+    };
+  });
+  return playerList;
+};
+
 const sendToRoom = (
   code: string,
   message: {
@@ -512,15 +575,7 @@ const sendToRoom = (
   const room: Room | undefined = rooms[code];
 
   if (room) {
-    const playerList = room.clients.map((client) => {
-      return {
-        username: client.username,
-        leader: client.ws === room.leader ? true : false,
-        inGame: client.inGame,
-        checkedCells: countChecked(client.board),
-        bingo: client.bingo,
-      };
-    });
+    const playerList = getPlayerList(room);
     room.clients.forEach((client) => {
       if (client.ws !== authorWs) {
         client.ws.send(JSON.stringify({ ...message, playerList }));
@@ -535,23 +590,15 @@ const sendToClient = (
     type: string;
     text: string;
     board?: Cell[][];
-    client? : {
-      id: string,
-      username: string
-    }
+    client?: {
+      id: string;
+      username: string;
+    };
   },
   clientWs: WebSocket
 ) => {
   const room: Room | undefined = rooms[code];
-  const playerList = room.clients.map((client) => {
-    return {
-      username: client.username,
-      leader: client.ws === room.leader ? true : false,
-      inGame: client.inGame,
-      checkedCells: countChecked(client.board),
-      bingo: client.bingo,
-    };
-  });
+  const playerList = getPlayerList(room);
   clientWs.send(JSON.stringify({ ...message, playerList }));
 };
 
