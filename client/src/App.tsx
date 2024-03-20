@@ -132,7 +132,7 @@ const App: React.FC = () => {
 
   const joinRoom = () => {
     if (roomCode.trim() == "") {
-      alert("Please enter a room code");
+      toast.error("Please enter a room code");
       return;
     }
     ws.send(
@@ -142,7 +142,7 @@ const App: React.FC = () => {
 
   const sendMessage = () => {
     if (message.trim() == "") {
-      alert("Please enter message");
+      toast.error("Please enter message");
       return;
     }
 
@@ -300,9 +300,10 @@ const App: React.FC = () => {
             />
 
             <input
-              type="text"
+              type="number"
               id="roomCode"
               placeholder="Enter room code"
+              maxLength={5}
               onChange={(e) => setRoomCode(e.target.value)}
             />
           </div>
