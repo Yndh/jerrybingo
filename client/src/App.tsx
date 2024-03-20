@@ -568,6 +568,7 @@ const App: React.FC = () => {
       {/* Overview */}
       {room && overview && !wsError && !gameStarted && (
         <div className="overviewContainer">
+          <h1>Summary</h1>
           <ol>
             {leaderboard.map((player: TopThree, index: number) => (
               <li key={index}>
@@ -601,7 +602,7 @@ const App: React.FC = () => {
             </h1>
             <div className="buttons">
               <button onClick={() => setModalOpen(false)}>❌ Cancel</button>
-              <button onClick={kickUser}>👢 Kick User</button>
+              <button onClick={kickUser}>🥾 Kick User</button>
             </div>
           </div>
         </div>
