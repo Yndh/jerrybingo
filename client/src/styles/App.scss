@@ -122,6 +122,14 @@
     padding: 0;
     margin: 0;
 
+    &.player li{
+      cursor: pointer;
+
+      &:hover .username{
+        text-decoration: line-through;
+      }
+    }
+
     li {
       display: flex;
       gap: 10px;

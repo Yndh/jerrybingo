@@ -1,4 +1,3 @@
-// App.tsx
 import React, { useState, useEffect } from "react";
 import "./styles/App.scss";
 import { ToastContainer, toast } from "react-toastify";
@@ -32,6 +31,11 @@ interface TopThree {
   checkedCells: number;
 }
 
+interface Clients {
+  id: string, 
+  username: string
+}
+
 const App: React.FC = () => {
   const [wsError, setWsError] = useState<string>("");
 
@@ -40,6 +44,8 @@ const App: React.FC = () => {
   const [roomCode, setRoomCode] = useState<string>("");
   const [creatingRoom, setCreatingRoom] = useState<boolean>(false);
   const [joiningRoom, setJoiningRoom] = useState<boolean>(false);
+  const [clientId, setClientId] = useState<string>("")
+  const [clients, setClients] = useState<Clients[]>([])
 
   //Room
   const [message, setMessage] = useState("");
@@ -65,7 +71,7 @@ const App: React.FC = () => {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      console.log(data);
+      console.table(data);
 
       if (data.type === "message") {
         console.table(data);
@@ -85,6 +91,12 @@ const App: React.FC = () => {
       } else if (data.type === "roomCode") {
         setRoom(data.roomCode);
         setMessages([]);
+      } else if (data.type === "clientId") {
+        setClientId(data.client.id)
+        console.table(clientId)
+      } else if (data.type === "newClientId") {
+        setClients((prevClients) => [...prevClients, { id: data.client.id, username: data.client.username}])
+        console.table(clients)
       } else if (data.type === "gameStarted") {
         setBoard(data.board);
         setGameStarted(true);
@@ -102,6 +114,8 @@ const App: React.FC = () => {
         setLeaderboard(data.leaderboard);
         setPlayerList(data.playerList);
         setOverview(true);
+      } else if (data.type === "leave") {
+        reset()
       } else if (data.type === "error") {
         toast.error(data.message);
         setMessages([]);
@@ -181,17 +195,27 @@ const App: React.FC = () => {
   };
 
   const leaveRoom = () => {
-    setRoom("");
-    setUsername("");
-    setMessages([]);
-    setPlayerList([]);
-    setCreatedRoom(false);
     ws.send(
       JSON.stringify({
         type: "leave",
+        room: room
       })
     );
   };
+
+  const reset = () => {
+    setCreatedRoom(false)
+    setRoom("")
+    setMessages([])
+    setMessage("")
+    setBoard([])
+    setGameStarted(false)
+    setBingo(false)
+    setCreatingRoom(false)
+    setJoiningRoom(true)
+    setLeaderboard([])
+    setOverview(false)
+  }
 
   const goToLobby = () => {
     setOverview(false);
@@ -297,7 +321,7 @@ const App: React.FC = () => {
           </h1>
           <div className="container players">
             <h3>👥 Players</h3>
-            <ul>
+            <ul className="player">
               {playerList
                 .filter((player: Player) => player.inGame)
                 .sort((a: Player, b: Player) => {
@@ -312,8 +336,10 @@ const App: React.FC = () => {
                 .map((player: Player, index: number) => (
                   <li key={index}>
                     {player.leader ? "👑" : ""}
-                    {player.username + " "}
-                    <b>{" [In Game]"}</b>
+                    <span className="username">
+                      {player.username + " "}
+                      <b>{" [In Game]"}</b>
+                    </span>
                   </li>
                 ))}
               {playerList
@@ -321,7 +347,9 @@ const App: React.FC = () => {
                 .map((player: Player, index: number) => (
                   <li key={index}>
                     {player.leader ? "👑" : ""}
-                    {player.username}
+                    <span className="username">
+                      {player.username}
+                    </span>
                   </li>
                 ))}
             </ul>
@@ -389,7 +417,7 @@ const App: React.FC = () => {
           <div className="sidebar">
             <div className="container players">
               <h3>👥 Players</h3>
-              <ul>
+              <ul className="player">
                 {playerList
                   .filter((player: Player) => player.inGame)
                   .sort((a: Player, b: Player) => {
@@ -404,8 +432,10 @@ const App: React.FC = () => {
                   .map((player: Player, index: number) => (
                     <li key={index}>
                       {player.leader ? "👑" : ""}
-                      {player.username + " "}
-                      <b>{" [In Game]"}</b>
+                      <span className="username">
+                        {player.username + " "}
+                        <b>{" [In Game]"}</b>
+                      </span>
                     </li>
                   ))}
                 {playerList
@@ -413,7 +443,9 @@ const App: React.FC = () => {
                   .map((player: Player, index: number) => (
                     <li key={index}>
                       {player.leader ? "👑" : ""}
-                      {player.username}
+                      <span className="username">
+                        {player.username}
+                      </span>
                     </li>
                   ))}
               </ul>

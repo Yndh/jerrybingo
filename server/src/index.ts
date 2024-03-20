@@ -4,6 +4,7 @@ import { jerry } from "./jerry";
 const http = require("http");
 
 interface Client {
+  id: string;
   ws: WebSocket;
   username: string;
   inGame: boolean;
@@ -40,8 +41,11 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const rooms: { [key: string]: Room } = {};
+let clientCounter: number = 0
 
 wss.on("connection", (ws: WebSocket) => {
+  clientCounter++
+  
   ws.on("message", (msg: WebSocket.Data) => {
     const data: {
       type: string;
@@ -50,9 +54,9 @@ wss.on("connection", (ws: WebSocket) => {
       text?: string;
       value?: { x: number; y: number };
     } = JSON.parse(msg.toString());
-
+    
     console.table(rooms);
-
+    
     if (data.type === "join") {
       if (data.room) {
         // Join Room
@@ -64,17 +68,37 @@ wss.on("connection", (ws: WebSocket) => {
         if (!data.username || data.username.trim() == "") {
           ws.send(
             JSON.stringify({ type: "error", message: "No username provided" })
-          );
-          return;
-        }
-
+            );
+            return;
+          }
+          const clientId = generateClientId()
+          
         rooms[code].clients.push({
+          id: clientId,
           ws: ws,
           username: data.username,
           inGame: false,
           bingo: false,
           board: [],
         });
+        sendToClient(code, {
+          type: "clientId",
+          text: "",
+          client: {
+            id: clientId,
+            username: data.username
+          }
+        }, ws)
+
+        sendToClient(code, {
+          type: "newClientId",
+          text: "",
+          client: {
+            id: clientId,
+            username: data.username
+          }
+        }, rooms[code].leader)
+
         sendToRoom(code, {
           type: "message",
           text: `${data.username} joined the room`,
@@ -89,10 +113,12 @@ wss.on("connection", (ws: WebSocket) => {
 
         // Create New Room
         const code: string = generateRoomCode();
+        const clientId = generateClientId()
         rooms[code] = {
           leader: ws,
           clients: [
             {
+              id: clientId,
               ws: ws,
               username: data.username,
               inGame: false,
@@ -103,7 +129,7 @@ wss.on("connection", (ws: WebSocket) => {
           roomCode: code,
           gameStarted: false,
         };
-        ws.send(JSON.stringify({ type: "roomCode", roomCode: code }));
+        ws.send(JSON.stringify({ type: "roomCode", roomCode: code, clientId: clientId }));
       }
     } else if (data.type === "message") {
       if (data.room && data.text) {
@@ -315,7 +341,32 @@ wss.on("connection", (ws: WebSocket) => {
         room.clients.map((client) => (client.bingo = false));
       }
     } else if (data.type === "leave") {
-      removeUser(ws);
+      if(data.room){
+        const code = data.room;
+        const room = rooms[code];
+        if (!room) {
+          ws.send(JSON.stringify({ type: "error", message: "Room not found" }));
+          return;
+        }
+
+        removeUser(ws);
+        sendToClient(code, {
+          type: "leave",
+          text: "You have successfully left the room"
+        }, ws)
+      }
+    } else if (data.type === "kick"){
+      if(data.room){
+        const code = data.room
+        const room = rooms[code]
+        if(!room){
+          ws.send(JSON.stringify({
+            type: "error",
+            message: "Room not found"
+          }))
+          return;
+        }
+      }
     }
   });
 
@@ -323,6 +374,10 @@ wss.on("connection", (ws: WebSocket) => {
     removeUser(ws);
   });
 });
+
+const generateClientId = (): string => { 
+  return `client${clientCounter}`;
+}
 
 const generateRoomCode = (): string => {
   const code: string = Math.floor(10000 + Math.random() * 90000).toString();
@@ -480,6 +535,10 @@ const sendToClient = (
     type: string;
     text: string;
     board?: Cell[][];
+    client? : {
+      id: string,
+      username: string
+    }
   },
   clientWs: WebSocket
 ) => {
