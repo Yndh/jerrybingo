@@ -59,7 +59,8 @@ wss.on("connection", (ws: WebSocket) => {
       if (data.room) {
         // Join Room
         const code: string = data.room;
-        if (!rooms[code]) {
+        const room = rooms[code];
+        if (!room) {
           ws.send(JSON.stringify({ type: "error", message: "Room not found" }));
           return;
         }
@@ -69,9 +70,19 @@ wss.on("connection", (ws: WebSocket) => {
           );
           return;
         }
+        if (data.username.length > 10) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Username must be at lower tha 10 characters long",
+            })
+          );
+          return;
+        }
+
         const clientId = generateClientId();
 
-        rooms[code].clients.push({
+        room.clients.push({
           id: clientId,
           ws: ws,
           username: data.username,
@@ -84,7 +95,7 @@ wss.on("connection", (ws: WebSocket) => {
             type: "roomCode",
             roomCode: code,
             clientId: clientId,
-            playerList: getPlayerList(rooms[code]),
+            playerList: getPlayerList(room),
           })
         );
 
@@ -96,6 +107,15 @@ wss.on("connection", (ws: WebSocket) => {
         if (!data.username || data.username.trim() == "") {
           ws.send(
             JSON.stringify({ type: "error", message: "No username provided" })
+          );
+          return;
+        }
+        if (data.username.length > 10) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Username must be at lower tha 10 characters long",
+            })
           );
           return;
         }
@@ -129,8 +149,9 @@ wss.on("connection", (ws: WebSocket) => {
       }
     } else if (data.type === "message") {
       if (data.room && data.text) {
-        const room: string = data.room;
-        const client = rooms[room].clients.find((client) => client.ws === ws);
+        const code: string = data.room;
+        const room = rooms[code];
+        const client = room.clients.find((client) => client.ws === ws);
         if (!client) {
           ws.send(
             JSON.stringify({ type: "error", message: "No client found" })
@@ -140,7 +161,7 @@ wss.on("connection", (ws: WebSocket) => {
         const username: string = client.username;
 
         sendToRoom(
-          room,
+          code,
           {
             type: "message",
             username: username,

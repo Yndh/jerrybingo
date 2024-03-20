@@ -18,7 +18,9 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  width: clamp(300px, 500px, 600px);
+  min-width: 200px;
+  max-width: 700px;
+  // width: clamp(200px, 500px, 700px);
   gap: 25px;
 
   h1 {
@@ -38,7 +40,11 @@
   justify-content: center;
   flex-direction: column;
   flex-wrap: wrap;
-  width: clamp(300px, 1100px, 1300px);
+  // width: clamp(300px, 1100px, 1300px);
+  min-width: 300px;
+  max-width: 1300px;
+  width: 1100px;
+  width: 70%;
 
   ol {
     display: flex;
@@ -48,6 +54,7 @@
     list-style-type: none;
     width: 100%;
     flex-wrap: wrap;
+    padding: 0;
 
     li {
       display: flex;
@@ -62,6 +69,11 @@
 
       h1 {
         margin: 10px 0;
+        width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: center;
       }
 
       p {
@@ -200,11 +212,24 @@ ul.chat {
 }
 
 .gameContainer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 4fr 1fr;
+  gap: 20px;
   width: 100%;
   gap: 20px;
+  overflow-y: hidden;
+
+  .menuButton {
+    display: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 10px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    z-index: 3;
+  }
 
   .game {
     background: $backdrop-color;
@@ -217,7 +242,6 @@ ul.chat {
   }
 
   .game {
-    width: 85% !important;
     padding: 2rem;
 
     .game-board {
@@ -273,7 +297,7 @@ ul.chat {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    width: 15%;
+    transition: .3s;
 
     .messageContainer {
       flex-direction: column !important;
@@ -286,26 +310,44 @@ ul.chat {
 }
 
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+@media screen and (max-width: 768px) {
+
+  .gameContainer {
+    grid-template-columns: 1fr;
+    width: auto;
+
+    .game {
+      padding: 10px;
+    }
+
+    .board-cell {
+      width: 60px !important;
+      height: auto;
+      padding: 5px !important;
+
+      span {
+        font-size: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    .sidebar {
+      position: absolute;
+      right: -100%;
+      width: 100%;
+      background: $primary-color;
+      padding: 10px;
+      z-index: 2;
+
+      &.open {
+        right: 0;
+      }
+    }
+
+    .menuButton {
+      display: flex;
+    }
   }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }

@@ -23,6 +23,7 @@
 }
 
 .App {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -30,6 +31,10 @@
   width: 100vw;
   height: 100vh;
   padding: 2rem;
+}
+
+html {
+  overflow-y: hidden !important;
 }
 
 body {
@@ -46,10 +51,13 @@ h1 {
 }
 
 button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 10px;
   border: 1px solid $accent-color;
   outline: none;
-  padding: 15px 40px;
+  padding: 15px 20px;
   width: 100%;
   font-size: 1.5em;
   font-weight: 600;
@@ -87,18 +95,3 @@ input {
 ::-webkit-scrollbar {
   display: none;
 }
-
-// @media (prefers-color-scheme: light) {
-//   :root {
-//     color: #213547;
-//     background-color: #ffffff;
-//   }
-
-//   a:hover {
-//     color: #747bff;
-//   }
-
-//   button {
-//     background-color: #f9f9f9;
-//   }
-// }

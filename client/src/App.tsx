@@ -52,6 +52,7 @@ const App: React.FC = () => {
   const [board, setBoard] = useState<Cell[][]>([]);
   const [gameStarted, setGameStarted] = useState<boolean>(false);
   const [bingo, setBingo] = useState<boolean>(false);
+  const [sideBarOpen, setSideBarOpen] = useState<boolean>(false);
 
   // Overview
   const [overview, setOverview] = useState<boolean>(false);
@@ -282,8 +283,12 @@ const App: React.FC = () => {
               type="text"
               id="usernameInput"
               placeholder="Enter your nickname"
-              onChange={(e) => setUsername(e.target.value)}
+              maxLength={10}
+              onChange={(e) => {
+                if (e.target.value.length <= 10) setUsername(e.target.value);
+              }}
             />
+
             <input
               type="text"
               id="roomCode"
@@ -360,7 +365,7 @@ const App: React.FC = () => {
                       }
                     >
                       {player.username + " "}
-                      <b>{" [In Game]"}</b>
+                      <b>{" [Game]"}</b>
                     </span>
                   </li>
                 ))}
@@ -449,7 +454,13 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <div className="sidebar">
+          <button
+            className="menuButton"
+            onClick={() => setSideBarOpen(!sideBarOpen)}
+          >
+            {sideBarOpen ? "❌" : "💬"}
+          </button>
+          <div className={`sidebar ${sideBarOpen ? "open" : ""}`}>
             <div className="container players">
               <h3>👥 Players</h3>
               <ul className="player">
@@ -483,10 +494,7 @@ const App: React.FC = () => {
                       >
                         {player.username + " "}
 
-                        <b>
-                          {" [In Game] "}
-                          {player.checkedCells}/25
-                        </b>
+                        <b>{player.checkedCells}/25</b>
                       </span>
                     </li>
                   ))}
@@ -510,6 +518,7 @@ const App: React.FC = () => {
                         }
                       >
                         {player.username}
+                        <b>{" [Lobby] "}</b>
                       </span>
                     </li>
                   ))}
