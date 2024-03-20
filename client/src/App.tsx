@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import "./styles/App.scss";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 
-const ws = new WebSocket("ws://localhost:8080");
+const ws = new WebSocket(import.meta.env.VITE_WS_URL);
 
 interface Message {
   username?: string;
