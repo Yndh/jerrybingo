@@ -570,6 +570,10 @@ const getTopThreePlayers = (room: Room): TopThree[] => {
 };
 
 const getPlayerList = (room: Room) => {
+  if (!room || !room.clients || room.clients.length === 0) {
+    return [];
+  }
+
   const playerList = room.clients.map((client) => {
     return {
       id: client.id,
