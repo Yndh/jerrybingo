@@ -271,8 +271,9 @@ wss.on("connection", (ws: WebSocket) => {
         }
         sendToRoom(code, {
           type: "check",
-          text: `${client.username} ${cell.checked ? "checked" : "unchecked"} ${cell.value
-            }`,
+          text: `${client.username} ${cell.checked ? "checked" : "unchecked"} ${
+            cell.value
+          }`,
         });
 
         const bingo = checkBoard(client.board);

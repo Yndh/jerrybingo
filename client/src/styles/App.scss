@@ -357,6 +357,34 @@ ul.chat {
   }
 }
 
+.loaderContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+
+  .loader {
+    font-size: 50px;
+    position: relative;
+    animation: spin 3.5s cubic-bezier(0.4, 0.01, 0.165, 0.99) infinite;
+  }
+}
+
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  40% {
+    transform: rotate(720deg);
+  }
+
+  100% {
+    transform: rotate(1440deg);
+  }
+}
+
 @media screen and (max-width: 768px) {
 
   .gameContainer {

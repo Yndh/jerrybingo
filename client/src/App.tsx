@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./styles/App.scss";
 import { toast } from "react-toastify";
+import Confetti from "./styles/components/Confetti";
 
 const ws = new WebSocket(import.meta.env.VITE_WS_URL);
 
@@ -33,6 +34,7 @@ interface TopThree {
 
 const App: React.FC = () => {
   const [wsError, setWsError] = useState<string>("");
+  const [connected, setConnected] = useState<boolean>(false);
 
   //Lobby
   const [username, setUsername] = useState<string>("");
@@ -60,19 +62,16 @@ const App: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<TopThree[]>([]);
 
   // Other
-  const [clientId, setClientId] = useState<string>("");
   const [modalOpen, setModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     ws.onopen = () => {
       setWsError("");
+      setConnected(true);
     };
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-
-      console.table(data);
-      console.table(data.playerList);
 
       if (data.type === "message") {
         setMessages((prevMessages) => [
@@ -91,7 +90,6 @@ const App: React.FC = () => {
         setRoom(data.roomCode);
         setMessages([]);
         setPlayerList(data.playerList);
-        setClientId(data.clientId);
       } else if (data.type === "gameStarted") {
         setBoard(data.board);
         setGameStarted(true);
@@ -265,6 +263,12 @@ const App: React.FC = () => {
 
   return (
     <div className="App">
+      {!connected && !wsError && (
+        <div className="loaderContainer">
+          <span className="loader">🔢</span>
+        </div>
+      )}
+
       {/* Error */}
       {wsError && (
         <div className="mainContainer">
@@ -274,7 +278,7 @@ const App: React.FC = () => {
       )}
 
       {/* Main Page */}
-      {!room && !joiningRoom && !creatingRoom && !wsError && (
+      {!room && !joiningRoom && !creatingRoom && !wsError && connected && (
         <div className="mainContainer">
           <h1>Jerrdle</h1>
           <div className="inputContainer">
@@ -285,7 +289,7 @@ const App: React.FC = () => {
       )}
 
       {/* Joining Room */}
-      {!room && joiningRoom && !creatingRoom && !wsError && (
+      {!room && joiningRoom && !creatingRoom && !wsError && connected && (
         <div className="mainContainer">
           <h1>Join room</h1>
           <div className="inputContainer">
@@ -320,7 +324,7 @@ const App: React.FC = () => {
       )}
 
       {/* Creating Room */}
-      {!room && !joiningRoom && creatingRoom && !wsError && (
+      {!room && !joiningRoom && creatingRoom && !wsError && connected && (
         <div className="mainContainer">
           <h1>New room</h1>
           <input
@@ -339,7 +343,7 @@ const App: React.FC = () => {
       )}
 
       {/* Lobby */}
-      {room && !wsError && !gameStarted && !overview && (
+      {room && !wsError && !gameStarted && !overview && connected && (
         <div className="roomContainer">
           <h1>
             Room <span className="code">#{room}</span>
@@ -444,7 +448,7 @@ const App: React.FC = () => {
       )}
 
       {/* Game */}
-      {room && gameStarted && !wsError && !overview && (
+      {room && gameStarted && !wsError && !overview && connected && (
         <div className="gameContainer">
           <div className="game">
             <h2>🔢 Bingo</h2>
@@ -567,7 +571,7 @@ const App: React.FC = () => {
       )}
 
       {/* Overview */}
-      {room && overview && !wsError && !gameStarted && (
+      {room && overview && !wsError && !gameStarted && connected && (
         <div className="overviewContainer">
           <h1>Summary</h1>
           <ol>
@@ -594,6 +598,8 @@ const App: React.FC = () => {
           <button onClick={goToLobby}>🎮 Play again</button>
         </div>
       )}
+
+      {bingo && <Confetti />}
 
       {modalOpen && (
         <div className="modalContainer">
