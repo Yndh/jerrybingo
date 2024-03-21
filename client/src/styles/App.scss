@@ -388,12 +388,20 @@ ul.chat {
 @media screen and (max-width: 768px) {
 
   h1 {
-    font-size: 50px !important;
+    font-size: 40px !important;
   }
 
   .mainContainer,
   .roomContainer {
     gap: 15px;
+  }
+
+  button.send span:last-child {
+    display: none;
+  }
+
+  .container.chat {
+    height: 230px;
   }
 
 

@@ -421,7 +421,9 @@ const App: React.FC = () => {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
             />
-            <button onClick={sendMessage}>✉️ Send</button>
+            <button className="send" onClick={sendMessage}>
+              <span>✉️</span> <span>Send</span>
+            </button>
           </form>
 
           <div className="inputContainer">
@@ -544,7 +546,9 @@ const App: React.FC = () => {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
-              <button onClick={sendMessage}>✉️ Send</button>
+              <button className="send" onClick={sendMessage}>
+                <span>✉️</span> <span>Send</span>
+              </button>
             </form>
 
             <div className="inputContainer">
