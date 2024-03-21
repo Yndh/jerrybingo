@@ -387,6 +387,16 @@ ul.chat {
 
 @media screen and (max-width: 768px) {
 
+  h1 {
+    font-size: 50px !important;
+  }
+
+  .mainContainer,
+  .roomContainer {
+    gap: 15px;
+  }
+
+
   .gameContainer {
     grid-template-columns: 1fr;
     width: auto;

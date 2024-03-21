@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./styles/App.scss";
 import { toast } from "react-toastify";
 import Confetti from "./styles/components/Confetti";
+import Chat from "./styles/components/Chat";
 
 const ws = new WebSocket(import.meta.env.VITE_WS_URL);
 
@@ -409,20 +410,11 @@ const App: React.FC = () => {
                 ))}
             </ul>
           </div>
-          <div className="container chat">
-            <h3>💬 Chat</h3>
-            <ul className="chat">
-              {messages.map((message: Message, index: number) => (
-                <li key={index}>
-                  <span className="username">
-                    {message.username ? `[${message.username}]: ` : ""}{" "}
-                  </span>
-                  <span className="message">{message.text}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="messageContainer">
+          <Chat messages={messages} />
+          <form
+            className="messageContainer"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <input
               type="text"
               placeholder="Enter your message"
@@ -430,7 +422,7 @@ const App: React.FC = () => {
               onChange={(e) => setMessage(e.target.value)}
             />
             <button onClick={sendMessage}>✉️ Send</button>
-          </div>
+          </form>
 
           <div className="inputContainer">
             {createdRoom && (
@@ -510,6 +502,7 @@ const App: React.FC = () => {
                         {player.username + " "}
 
                         <b>{player.checkedCells}/25</b>
+                        {player.bingo && <b>{" [BINGO]"}</b>}
                       </span>
                     </li>
                   ))}
@@ -539,20 +532,12 @@ const App: React.FC = () => {
                   ))}
               </ul>
             </div>
-            <div className="container chat">
-              <h3>💬 Chat</h3>
-              <ul className="chat">
-                {messages.map((message: Message, index: number) => (
-                  <li key={index}>
-                    <span className="username">
-                      {message.username ? `[${message.username}]: ` : ""}{" "}
-                    </span>
-                    <span className="message">{message.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="messageContainer">
+            <Chat messages={messages} />
+
+            <form
+              className="messageContainer"
+              onSubmit={(e) => e.preventDefault()}
+            >
               <input
                 type="text"
                 placeholder="Enter your message"
@@ -560,7 +545,7 @@ const App: React.FC = () => {
                 onChange={(e) => setMessage(e.target.value)}
               />
               <button onClick={sendMessage}>✉️ Send</button>
-            </div>
+            </form>
 
             <div className="inputContainer">
               {createdRoom && <button onClick={endGame}>⛔ End game</button>}
