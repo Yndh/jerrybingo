@@ -100,7 +100,6 @@ const App: React.FC = () => {
       } else if (data.type === "bingo") {
         setBoard(data.board);
         setBingo(true);
-        toast.success("BINGO!");
       } else if (data.type === "check") {
         setPlayerList(data.playerList);
       } else if (data.type === "gameEnded") {
