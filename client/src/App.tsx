@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./styles/App.scss";
 import { toast } from "react-toastify";
 import Confetti from "./styles/components/Confetti";
@@ -36,6 +36,8 @@ interface TopThree {
 const App: React.FC = () => {
   const [wsError, setWsError] = useState<string>("");
   const [connected, setConnected] = useState<boolean>(false);
+  const pingIntervalRef = useRef<number | null>(null);
+  const pongTimeoutRef = useRef<number | null>(null);
 
   //Lobby
   const [username, setUsername] = useState<string>("");
@@ -66,15 +68,31 @@ const App: React.FC = () => {
   const [modalOpen, setModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
+    const pingHandler = () => {
+      ws.send(
+        JSON.stringify({
+          type: "ping",
+        })
+      );
+      pongTimeoutRef.current = setTimeout(() => {
+        ws.close();
+      }, 10000);
+    };
+
     ws.onopen = () => {
       setWsError("");
       setConnected(true);
+      pingIntervalRef.current = setInterval(pingHandler, 180000); // Send ping every 3min
     };
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      if (data.type === "message") {
+      if (data.type === "pong") {
+        if (pongTimeoutRef.current !== null) {
+          clearTimeout(pongTimeoutRef.current);
+        }
+      } else if (data.type === "message") {
         setMessages((prevMessages) => [
           ...prevMessages,
           { username: data.username, text: data.text },
@@ -120,6 +138,11 @@ const App: React.FC = () => {
     ws.onclose = () => {
       setWsError("You have been disconnected");
       reset();
+    };
+
+    return () => {
+      clearInterval(pingIntervalRef.current!);
+      clearTimeout(pongTimeoutRef.current!);
     };
   }, []);
 
@@ -299,7 +322,7 @@ const App: React.FC = () => {
               placeholder="Enter your nickname"
               maxLength={10}
               onChange={(e) => {
-                if (e.target.value.length <= 10) setUsername(e.target.value);
+                if (e.target.value.length <= 13) setUsername(e.target.value);
               }}
             />
 

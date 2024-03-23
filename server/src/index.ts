@@ -40,6 +40,9 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+const MAX_USERNAME_LENGTH = 13;
+const MAX_ROOM_CLIENTS = 13;
+
 const rooms: { [key: string]: Room } = {};
 
 wss.on("connection", (ws: WebSocket) => {
@@ -55,7 +58,14 @@ wss.on("connection", (ws: WebSocket) => {
 
     console.table(rooms);
 
-    if (data.type === "join") {
+    if (data.type === "ping") {
+      ws.send(
+        JSON.stringify({
+          type: "pong",
+        })
+      );
+      console.log("PING");
+    } else if (data.type === "join") {
       if (data.room) {
         // Join Room
         const code: string = data.room;
@@ -70,15 +80,26 @@ wss.on("connection", (ws: WebSocket) => {
           );
           return;
         }
-        if (data.username.length > 10) {
+        if (data.username.length > MAX_USERNAME_LENGTH) {
           ws.send(
             JSON.stringify({
               type: "error",
-              message: "Username must be at lower tha 10 characters long",
+              message: `Username must be at lower than ${MAX_USERNAME_LENGTH} characters long`,
             })
           );
           return;
         }
+        if (room.clients.length >= MAX_ROOM_CLIENTS) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "The room is full",
+            })
+          );
+          return;
+        }
+
+        removeUser(ws); // remove user from all rooms
 
         const clientId = generateClientId();
 
@@ -110,15 +131,17 @@ wss.on("connection", (ws: WebSocket) => {
           );
           return;
         }
-        if (data.username.length > 10) {
+        if (data.username.length > MAX_USERNAME_LENGTH) {
           ws.send(
             JSON.stringify({
               type: "error",
-              message: "Username must be at lower tha 10 characters long",
+              message: `Username must be at lower tha ${MAX_USERNAME_LENGTH} characters long`,
             })
           );
           return;
         }
+
+        removeUser(ws); // remove user from all rooms
 
         // Create New Room
         const code: string = generateRoomCode();
@@ -456,8 +479,12 @@ const generateRoomCode = (): string => {
 
 const generateBoard = (size: number): Cell[][] => {
   const board: Cell[][] = [];
+  const items = jerry.slice();
 
-  const items = jerry.sort(() => Math.random() - 0.5);
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
 
   const centerIndex = Math.floor(size / 2);
 
@@ -465,9 +492,12 @@ const generateBoard = (size: number): Cell[][] => {
     board.push([]);
     for (let j = 0; j < size; j++) {
       if (i === centerIndex && j === centerIndex) {
-        board[i].push({ value: "FREE", checked: false });
+        board[i].push({ value: "FREE", checked: true });
       } else {
-        board[i].push({ value: items[i * 4 + j], checked: false });
+        const index = i * size + j;
+        const value = items[index % items.length];
+        board[i].push({ value, checked: false });
+        items.splice(index % items.length, 1);
       }
     }
   }
