@@ -22,6 +22,7 @@
   max-width: 700px;
   // width: clamp(200px, 500px, 700px);
   gap: 25px;
+  overflow-y: auto;
 
   h1 {
     margin: 10px 0;
@@ -433,9 +434,14 @@ ul.chat {
       background: $primary-color;
       padding: 10px;
       z-index: 2;
+      bottom: 20px;
 
       &.open {
         right: 0;
+
+        button.send span:last-child{
+          display: block;
+        }
       }
     }
 

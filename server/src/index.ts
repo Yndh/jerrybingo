@@ -64,7 +64,6 @@ wss.on("connection", (ws: WebSocket) => {
           type: "pong",
         })
       );
-      console.log("PING");
     } else if (data.type === "join") {
       if (data.room) {
         // Join Room
@@ -174,6 +173,10 @@ wss.on("connection", (ws: WebSocket) => {
       if (data.room && data.text) {
         const code: string = data.room;
         const room = rooms[code];
+        if(!room){
+          ws.send(JSON.stringify({ type: "error", message: "Room not found" }));
+          return; 
+        }
         const client = room.clients.find((client) => client.ws === ws);
         if (!client) {
           ws.send(

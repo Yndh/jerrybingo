@@ -87,6 +87,7 @@ const App: React.FC = () => {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      console.table(data)
 
       if (data.type === "pong") {
         if (pongTimeoutRef.current !== null) {
@@ -126,7 +127,8 @@ const App: React.FC = () => {
         setGameStarted(false);
         setLeaderboard(data.leaderboard);
         setPlayerList(data.playerList);
-        setOverview(true);
+        setOverview(true);  
+        setModalOpen(false)
       } else if (data.type === "leave") {
         reset();
       } else if (data.type === "error") {
@@ -320,7 +322,7 @@ const App: React.FC = () => {
               type="text"
               id="usernameInput"
               placeholder="Enter your nickname"
-              maxLength={10}
+              maxLength={13}
               onChange={(e) => {
                 if (e.target.value.length <= 13) setUsername(e.target.value);
               }}
