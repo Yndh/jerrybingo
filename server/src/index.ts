@@ -375,12 +375,12 @@ wss.on("connection", (ws: WebSocket) => {
         }
 
         room.gameStarted = false;
-        room.clients.map((client) => (client.inGame = false));
         sendToRoom(code, {
           type: "gameEnded",
           text: "",
           leaderboard: getTopThreePlayers(room),
         });
+        room.clients.map((client) => (client.inGame = false));
         room.clients.map((client) => (client.bingo = false));
       }
     } else if (data.type === "leave") {
@@ -569,7 +569,7 @@ const countChecked = (board: Cell[][]): number => {
 };
 
 const getTopThreePlayers = (room: Room): TopThree[] => {
-  const bingoPlayers = room.clients;
+  const bingoPlayers = room.clients.filter(player => player.inGame)
 
   bingoPlayers.forEach((player) => {
     if (!player.bingoTimestamp) {

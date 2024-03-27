@@ -3,6 +3,9 @@ import "./styles/App.scss";
 import { toast } from "react-toastify";
 import Confetti from "./styles/components/Confetti";
 import Chat from "./styles/components/Chat";
+import PlayerList from "./styles/components/PlayerList";
+import Summary from "./styles/components/Summary";
+import MessageForm from "./styles/components/MessageForm";
 
 const ws = new WebSocket(import.meta.env.VITE_WS_URL);
 
@@ -127,7 +130,7 @@ const App: React.FC = () => {
         setGameStarted(false);
         setLeaderboard(data.leaderboard);
         setPlayerList(data.playerList);
-        setOverview(true);  
+        setOverview(true);
         setModalOpen(false)
       } else if (data.type === "leave") {
         reset();
@@ -255,7 +258,7 @@ const App: React.FC = () => {
     setOverview(false);
   };
 
-  const calculateTimeDifference = (startTime: number, endTime: number) => {
+  const calculateTimeDifference = (startTime: number, endTime: number): string => {
     const start = new Date(startTime).getTime();
     const end = new Date(endTime).getTime();
     const timeDiff = Math.abs(end - start);
@@ -264,8 +267,12 @@ const App: React.FC = () => {
     const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
 
-    return `${hours}:${minutes}:${seconds}`;
+    const formattedMinutes = minutes < 10 ? `0${minutes}` : `${minutes}`;
+    const formattedSeconds = seconds < 10 ? `0${seconds}` : `${seconds}`;
+
+    return `${hours}:${formattedMinutes}:${formattedSeconds}`;
   };
+
 
   const switchToCreatingRoom = () => {
     setJoiningRoom(false);
@@ -375,80 +382,11 @@ const App: React.FC = () => {
           </h1>
           <div className="container players">
             <h3>👥 Players</h3>
-            <ul className="player">
-              {playerList
-                .filter((player: Player) => player.inGame)
-                .sort((a: Player, b: Player) => {
-                  const checkedCellsA = a.checkedCells || 0;
-                  const checkedCellsB = b.checkedCells || 0;
-
-                  if (checkedCellsA !== checkedCellsB) {
-                    return checkedCellsB - checkedCellsA;
-                  }
-                  return b.bingo ? 1 : -1;
-                })
-                .map((player: Player, index: number) => (
-                  <li key={index}>
-                    {player.leader ? "👑" : "👤"}
-                    <span
-                      className={
-                        createdRoom
-                          ? `username ${player.leader ? "leader" : ""}`
-                          : ""
-                      }
-                      onClick={() =>
-                        createdRoom
-                          ? player.leader
-                            ? ""
-                            : kickFromRoom(player.id, player.username)
-                          : ""
-                      }
-                    >
-                      {player.username + " "}
-                      <b>{" [Game]"}</b>
-                    </span>
-                  </li>
-                ))}
-              {playerList
-                .filter((player: Player) => !player.inGame)
-                .map((player: Player, index: number) => (
-                  <li key={index}>
-                    {player.leader ? "👑" : "👤"}
-                    <span
-                      className={
-                        createdRoom
-                          ? `username ${player.leader ? "leader" : ""}`
-                          : ""
-                      }
-                      onClick={() =>
-                        createdRoom
-                          ? player.leader
-                            ? ""
-                            : kickFromRoom(player.id, player.username)
-                          : ""
-                      }
-                    >
-                      {player.username}
-                    </span>
-                  </li>
-                ))}
-            </ul>
+            <PlayerList playerList={playerList} createdRoom={createdRoom} kickFromRoom={kickFromRoom} />
           </div>
+
           <Chat messages={messages} />
-          <form
-            className="messageContainer"
-            onSubmit={(e) => e.preventDefault()}
-          >
-            <input
-              type="text"
-              placeholder="Enter your message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <button className="send" onClick={sendMessage}>
-              <span>✉️</span> <span>Send</span>
-            </button>
-          </form>
+          <MessageForm message={message} setMessage={setMessage} sendMessage={sendMessage} />
 
           <div className="inputContainer">
             {createdRoom && (
@@ -496,84 +434,10 @@ const App: React.FC = () => {
           <div className={`sidebar ${sideBarOpen ? "open" : ""}`}>
             <div className="container players">
               <h3>👥 Players</h3>
-              <ul className="player">
-                {playerList
-                  .filter((player: Player) => player.inGame)
-                  .sort((a: Player, b: Player) => {
-                    const checkedCellsA = a.checkedCells || 0;
-                    const checkedCellsB = b.checkedCells || 0;
-
-                    if (checkedCellsA !== checkedCellsB) {
-                      return checkedCellsB - checkedCellsA;
-                    }
-                    return b.bingo ? 1 : -1;
-                  })
-                  .map((player: Player, index: number) => (
-                    <li key={index}>
-                      {player.leader ? "👑" : "👤"}
-                      <span
-                        className={
-                          createdRoom
-                            ? `username ${player.leader ? "leader" : ""}`
-                            : ""
-                        }
-                        onClick={() =>
-                          createdRoom
-                            ? player.leader
-                              ? ""
-                              : kickFromRoom(player.id, player.username)
-                            : ""
-                        }
-                      >
-                        {player.username + " "}
-
-                        <b>{player.checkedCells}/25</b>
-                        {player.bingo && <b>{" [BINGO]"}</b>}
-                      </span>
-                    </li>
-                  ))}
-                {playerList
-                  .filter((player: Player) => !player.inGame)
-                  .map((player: Player, index: number) => (
-                    <li key={index}>
-                      {player.leader ? "👑" : "👤"}
-                      <span
-                        className={
-                          createdRoom
-                            ? `username ${player.leader ? "leader" : ""}`
-                            : ""
-                        }
-                        onClick={() =>
-                          createdRoom
-                            ? player.leader
-                              ? ""
-                              : kickFromRoom(player.id, player.username)
-                            : ""
-                        }
-                      >
-                        {player.username}
-                        <b>{" [Lobby] "}</b>
-                      </span>
-                    </li>
-                  ))}
-              </ul>
+              <PlayerList playerList={playerList} createdRoom={createdRoom} game={true} kickFromRoom={kickFromRoom} />
             </div>
             <Chat messages={messages} />
-
-            <form
-              className="messageContainer"
-              onSubmit={(e) => e.preventDefault()}
-            >
-              <input
-                type="text"
-                placeholder="Enter your message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-              />
-              <button className="send" onClick={sendMessage}>
-                <span>✉️</span> <span>Send</span>
-              </button>
-            </form>
+            <MessageForm message={message} setMessage={setMessage} sendMessage={sendMessage} />
 
             <div className="inputContainer">
               {createdRoom && <button onClick={endGame}>⛔ End game</button>}
@@ -587,27 +451,7 @@ const App: React.FC = () => {
       {room && overview && !wsError && !gameStarted && connected && (
         <div className="overviewContainer">
           <h1>Summary</h1>
-          <ol>
-            {leaderboard.map((player: TopThree, index: number) => (
-              <li key={index}>
-                <h1>
-                  {index + 1 == 1 ? "🏆" : index + 1 == 2 ? "🥈" : "🥉"}#
-                  {index + 1} {player.username}
-                </h1>
-                {player.bingo && <p>🟦 BINGO!</p>}
-                <p>🔢 {player.checkedCells}/25</p>
-                {player.bingoTimestamp && player.gameTimestamp && (
-                  <p>
-                    🕧{" "}
-                    {calculateTimeDifference(
-                      player.gameTimestamp,
-                      player.bingoTimestamp
-                    )}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ol>
+          <Summary leaderboard={leaderboard} calculateTimeDifference={calculateTimeDifference} />
           <button onClick={goToLobby}>🎮 Play again</button>
         </div>
       )}
