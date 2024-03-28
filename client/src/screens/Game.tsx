@@ -1,6 +1,6 @@
-import Chat from "../styles/components/Chat";
-import MessageForm from "../styles/components/MessageForm";
-import PlayerList from "../styles/components/PlayerList";
+import Chat from "../components/Chat";
+import MessageForm from "../components/MessageForm";
+import PlayerList from "../components/PlayerList";
 
 interface Player {
   id: string;

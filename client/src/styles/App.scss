@@ -186,10 +186,6 @@
   input {
     min-width: 60% !important;
   }
-
-  button {
-    min-width: 40% !important;
-  }
 }
 
 ul.chat {
@@ -439,7 +435,7 @@ ul.chat {
       &.open {
         right: 0;
 
-        button.send span:last-child{
+        button.send span:last-child {
           display: block;
         }
       }

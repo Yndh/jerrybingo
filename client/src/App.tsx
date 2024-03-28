@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./styles/App.scss";
 import { toast } from "react-toastify";
-import Confetti from "./styles/components/Confetti";
+import Confetti from "./components/Confetti";
 import { useLocation } from "react-router-dom";
 import Game from "./screens/Game";
 import Lobby from "./screens/Lobby";
@@ -9,7 +9,7 @@ import Overview from "./screens/Overview";
 import Creating from "./screens/Creating";
 import Joining from "./screens/Joining";
 import Main from "./screens/Main";
-import Modal from "./styles/components/Modal";
+import Modal from "./components/Modal";
 
 const ws = new WebSocket(import.meta.env.VITE_WS_URL);
 

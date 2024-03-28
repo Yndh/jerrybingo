@@ -1,4 +1,4 @@
-import Summary from "../styles/components/Summary";
+import Summary from "../components/Summary";
 
 interface TopThree {
   username: string;
