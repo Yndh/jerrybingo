@@ -2,10 +2,14 @@ import React, { useState, useEffect, useRef } from "react";
 import "./styles/App.scss";
 import { toast } from "react-toastify";
 import Confetti from "./styles/components/Confetti";
-import Chat from "./styles/components/Chat";
-import PlayerList from "./styles/components/PlayerList";
-import Summary from "./styles/components/Summary";
-import MessageForm from "./styles/components/MessageForm";
+import { useLocation } from "react-router-dom";
+import Game from "./screens/Game";
+import Lobby from "./screens/Lobby";
+import Overview from "./screens/Overview";
+import Creating from "./screens/Creating";
+import Joining from "./screens/Joining";
+import Main from "./screens/Main";
+import Modal from "./styles/components/Modal";
 
 const ws = new WebSocket(import.meta.env.VITE_WS_URL);
 
@@ -37,6 +41,8 @@ interface TopThree {
 }
 
 const App: React.FC = () => {
+  let location = useLocation();
+
   const [wsError, setWsError] = useState<string>("");
   const [connected, setConnected] = useState<boolean>(false);
   const pingIntervalRef = useRef<number | null>(null);
@@ -49,7 +55,6 @@ const App: React.FC = () => {
   const [joiningRoom, setJoiningRoom] = useState<boolean>(false);
 
   //Room
-  const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [room, setRoom] = useState<string>("");
   const [createdRoom, setCreatedRoom] = useState<boolean>(false);
@@ -90,7 +95,7 @@ const App: React.FC = () => {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.table(data)
+      console.table(data);
 
       if (data.type === "pong") {
         if (pongTimeoutRef.current !== null) {
@@ -131,7 +136,7 @@ const App: React.FC = () => {
         setLeaderboard(data.leaderboard);
         setPlayerList(data.playerList);
         setOverview(true);
-        setModalOpen(false)
+        setModalOpen(false);
       } else if (data.type === "leave") {
         reset();
       } else if (data.type === "error") {
@@ -145,106 +150,28 @@ const App: React.FC = () => {
       reset();
     };
 
+    const query = useQuery();
+    const gameCode = query.get("gameCode");
+    if (gameCode) {
+      toast.info(gameCode);
+      setRoomCode(gameCode);
+      setJoiningRoom(true);
+    }
+
     return () => {
       clearInterval(pingIntervalRef.current!);
       clearTimeout(pongTimeoutRef.current!);
     };
   }, []);
 
-  const createRoom = () => {
-    setCreatedRoom(true);
-    ws.send(JSON.stringify({ type: "join", username: username }));
-  };
-
-  const joinRoom = () => {
-    if (roomCode.trim() == "") {
-      toast.error("Please enter a room code");
-      return;
-    }
-    ws.send(
-      JSON.stringify({ type: "join", username: username, room: roomCode })
-    );
-  };
-
-  const sendMessage = () => {
-    if (message.trim() == "") {
-      toast.error("Please enter message");
-      return;
-    }
-
-    ws.send(
-      JSON.stringify({
-        type: "message",
-        text: message,
-        room: room,
-      })
-    );
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { username: username, text: message },
-    ]);
-    setMessage("");
-  };
-
-  const startGame = () => {
-    ws.send(
-      JSON.stringify({
-        type: "start",
-        room: room,
-      })
-    );
-  };
-
-  const makeMove = (x: number, y: number) => {
-    ws.send(
-      JSON.stringify({
-        type: "move",
-        room: room,
-        value: { x, y },
-      })
-    );
-  };
-
-  const endGame = () => {
-    ws.send(
-      JSON.stringify({
-        type: "end",
-        room: room,
-      })
-    );
-  };
-
-  const leaveRoom = () => {
-    ws.send(
-      JSON.stringify({
-        type: "leave",
-        room: room,
-      })
-    );
-  };
-
-  const kickFromRoom = (clientId: string, username: string) => {
-    setModalOpen(true);
-    setUserToKick(username);
-    setClientIdToKick(clientId);
-  };
-
-  const kickUser = () => {
-    ws.send(
-      JSON.stringify({
-        type: "kick",
-        room: room,
-        clientId: clientIdToKick,
-      })
-    );
-    setModalOpen(false);
+  const useQuery = () => {
+    return new URLSearchParams(location.search);
   };
 
   const reset = () => {
     setCreatedRoom(false);
     setRoom("");
     setMessages([]);
-    setMessage("");
     setBoard([]);
     setGameStarted(false);
     setBingo(false);
@@ -252,41 +179,6 @@ const App: React.FC = () => {
     setJoiningRoom(true);
     setLeaderboard([]);
     setOverview(false);
-  };
-
-  const goToLobby = () => {
-    setOverview(false);
-  };
-
-  const calculateTimeDifference = (startTime: number, endTime: number): string => {
-    const start = new Date(startTime).getTime();
-    const end = new Date(endTime).getTime();
-    const timeDiff = Math.abs(end - start);
-
-    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
-    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
-
-    const formattedMinutes = minutes < 10 ? `0${minutes}` : `${minutes}`;
-    const formattedSeconds = seconds < 10 ? `0${seconds}` : `${seconds}`;
-
-    return `${hours}:${formattedMinutes}:${formattedSeconds}`;
-  };
-
-
-  const switchToCreatingRoom = () => {
-    setJoiningRoom(false);
-    setCreatingRoom(true);
-  };
-
-  const switchToJoingRoom = () => {
-    setCreatingRoom(false);
-    setJoiningRoom(true);
-  };
-
-  const backToMain = () => {
-    setCreatingRoom(false);
-    setJoiningRoom(false);
   };
 
   const refreshPage = () => {
@@ -311,165 +203,88 @@ const App: React.FC = () => {
 
       {/* Main Page */}
       {!room && !joiningRoom && !creatingRoom && !wsError && connected && (
-        <div className="mainContainer">
-          <h1>Jerrdle</h1>
-          <div className="inputContainer">
-            <button onClick={switchToJoingRoom}>🎮 Join Room</button>
-            <button onClick={switchToCreatingRoom}>🔨 Create Room</button>
-          </div>
-        </div>
+        <Main
+          setCreatingRoom={setCreatingRoom}
+          setJoiningRoom={setJoiningRoom}
+        />
       )}
 
       {/* Joining Room */}
       {!room && joiningRoom && !creatingRoom && !wsError && connected && (
-        <div className="mainContainer">
-          <h1>Join room</h1>
-          <div className="inputContainer">
-            <input
-              type="text"
-              id="usernameInput"
-              placeholder="Enter your nickname"
-              maxLength={13}
-              onChange={(e) => {
-                if (e.target.value.length <= 13) setUsername(e.target.value);
-              }}
-            />
-
-            <input
-              type="number"
-              id="roomCode"
-              placeholder="Enter room code"
-              maxLength={5}
-              onChange={(e) => setRoomCode(e.target.value)}
-            />
-          </div>
-          <div className="inputContainer">
-            <button
-              onClick={joinRoom}
-              disabled={!(roomCode.trim() !== "" && username.trim() !== "")}
-            >
-              🚪 Join Room
-            </button>
-            <button onClick={backToMain}>⬅️ Go Back</button>
-          </div>
-        </div>
+        <Joining
+          ws={ws}
+          username={username}
+          roomCode={roomCode}
+          setRoomCode={setRoomCode}
+          setUsername={setUsername}
+          setCreatingRoom={setCreatingRoom}
+          setCreatedRoom={setCreatedRoom}
+          setJoiningRoom={setJoiningRoom}
+        />
       )}
 
       {/* Creating Room */}
       {!room && !joiningRoom && creatingRoom && !wsError && connected && (
-        <div className="mainContainer">
-          <h1>New room</h1>
-          <input
-            type="text"
-            id="usernameInput"
-            placeholder="Enter your nickname"
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <div className="inputContainer">
-            <button onClick={createRoom} disabled={username.trim() == ""}>
-              🔨 Create Room
-            </button>
-            <button onClick={backToMain}>⬅️ Go Back</button>
-          </div>
-        </div>
+        <Creating
+          ws={ws}
+          username={username}
+          setUsername={setUsername}
+          setCreatingRoom={setCreatingRoom}
+          setCreatedRoom={setCreatedRoom}
+          setJoiningRoom={setJoiningRoom}
+        />
       )}
 
       {/* Lobby */}
       {room && !wsError && !gameStarted && !overview && connected && (
-        <div className="roomContainer">
-          <h1>
-            Room <span className="code">#{room}</span>
-          </h1>
-          <div className="container players">
-            <h3>👥 Players</h3>
-            <PlayerList playerList={playerList} createdRoom={createdRoom} kickFromRoom={kickFromRoom} />
-          </div>
-
-          <Chat messages={messages} />
-          <MessageForm message={message} setMessage={setMessage} sendMessage={sendMessage} />
-
-          <div className="inputContainer">
-            {createdRoom && (
-              <button
-                style={{ width: "100%", marginTop: 25 }}
-                onClick={startGame}
-              >
-                🎮 Start Game
-              </button>
-            )}
-
-            <button onClick={leaveRoom}>🚪 Leave Room</button>
-          </div>
-        </div>
+        <Lobby
+          ws={ws}
+          roomCode={room}
+          createdRoom={createdRoom}
+          username={username}
+          playerList={playerList}
+          messages={messages}
+          setMessages={setMessages}
+          setModalOpen={setModalOpen}
+          setUserToKick={setUserToKick}
+          setClientIdToKick={setClientIdToKick}
+        />
       )}
 
       {/* Game */}
       {room && gameStarted && !wsError && !overview && connected && (
-        <div className="gameContainer">
-          <div className="game">
-            <h2>🔢 Bingo</h2>
-            <div className="game-board">
-              {board.map((row, rowIndex) => (
-                <div key={rowIndex} className="board-row">
-                  {row.map((cell, columnIndex) => (
-                    <div
-                      key={columnIndex}
-                      className={`board-cell ${cell.checked ? "checked" : ""}`}
-                      onClick={() => makeMove(rowIndex, columnIndex)}
-                    >
-                      <span>{cell.value}</span>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <button
-            className="menuButton"
-            onClick={() => setSideBarOpen(!sideBarOpen)}
-          >
-            {sideBarOpen ? "❌" : "💬"}
-          </button>
-          <div className={`sidebar ${sideBarOpen ? "open" : ""}`}>
-            <div className="container players">
-              <h3>👥 Players</h3>
-              <PlayerList playerList={playerList} createdRoom={createdRoom} game={true} kickFromRoom={kickFromRoom} />
-            </div>
-            <Chat messages={messages} />
-            <MessageForm message={message} setMessage={setMessage} sendMessage={sendMessage} />
-
-            <div className="inputContainer">
-              {createdRoom && <button onClick={endGame}>⛔ End game</button>}
-              <button onClick={leaveRoom}>🚪 Leave room</button>
-            </div>
-          </div>
-        </div>
+        <Game
+          ws={ws}
+          roomCode={room}
+          createdRoom={createdRoom}
+          username={username}
+          playerList={playerList}
+          messages={messages}
+          setMessages={setMessages}
+          setModalOpen={setModalOpen}
+          setUserToKick={setUserToKick}
+          setClientIdToKick={setClientIdToKick}
+          board={board}
+          sideBarOpen={sideBarOpen}
+          setSideBarOpen={setSideBarOpen}
+        />
       )}
 
       {/* Overview */}
       {room && overview && !wsError && !gameStarted && connected && (
-        <div className="overviewContainer">
-          <h1>Summary</h1>
-          <Summary leaderboard={leaderboard} calculateTimeDifference={calculateTimeDifference} />
-          <button onClick={goToLobby}>🎮 Play again</button>
-        </div>
+        <Overview leaderboard={leaderboard} setOverview={setOverview} />
       )}
 
       {bingo && <Confetti />}
 
       {modalOpen && (
-        <div className="modalContainer">
-          <div className="modal">
-            <h1>
-              Are you sure you want to kick 👤 {userToKick} from the room?
-            </h1>
-            <div className="buttons">
-              <button onClick={() => setModalOpen(false)}>❌ Cancel</button>
-              <button onClick={kickUser}>🥾 Kick User</button>
-            </div>
-          </div>
-        </div>
+        <Modal
+          ws={ws}
+          roomCode={roomCode}
+          userToKick={userToKick}
+          clientIdToKick={clientIdToKick}
+          setModalOpen={setModalOpen}
+        />
       )}
     </div>
   );
