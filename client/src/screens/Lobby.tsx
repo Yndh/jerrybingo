@@ -1,6 +1,8 @@
+import { toast } from "react-toastify";
 import Chat from "../components/Chat";
 import MessageForm from "../components/MessageForm";
 import PlayerList from "../components/PlayerList";
+import { URL } from "../components/Url";
 
 interface Player {
   id: string;
@@ -59,11 +61,50 @@ export default function Lobby({
     );
   };
 
+  const copyUrl = () => {
+    if (navigator && navigator.clipboard) {
+      navigator.clipboard
+        .writeText(`${URL}?gameCode=${roomCode}`)
+        .then(() => {
+          toast.success("Link copied to clipboard successfully");
+        })
+        .catch(() => {
+          toast.error("Oops! Unable to copy the link. Please try again.");
+        });
+    }
+  };
+
+  const shareHandler = () => {
+    if (navigator && navigator.share) {
+      navigator
+        .share({
+          title: "Jerrdle Game Invite",
+          text: "Join my room in Jerrdle!",
+          url: `${URL}?gameCode=${roomCode}`,
+        })
+        .catch(() =>
+          toast.error(`Oops! Unable share the link. Please try again.`)
+        );
+    } else {
+      toast.error(`Oops! Unable share the link. Please try again.`);
+    }
+  };
+
   return (
     <div className="roomContainer">
-      <h1>
-        Room <span className="code">#{roomCode}</span>
-      </h1>
+      <div className="container link">
+        <h3>Room #{roomCode}</h3>
+        {/* <p>Invite others to join the lobby by sharing the link</p> */}
+        <div className="container url" onClick={copyUrl}>
+          <span>
+            {URL}?gameCode={roomCode}
+          </span>
+        </div>
+        <div className="buttons">
+          <button onClick={copyUrl}>📋 Copy Link</button>
+          <button onClick={shareHandler}>🔗</button>
+        </div>
+      </div>
       <div className="container players">
         <h3>👥 Players</h3>
         <PlayerList

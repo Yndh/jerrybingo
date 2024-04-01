@@ -128,6 +128,39 @@
     height: 180px;
   }
 
+  &.link {
+    gap: 10px;
+
+    p {
+      font-size: 14px;
+      opacity: .7;
+      text-align: center;
+    }
+
+    .url {
+      font-size: 14px;
+      opacity: .7;
+    }
+
+    .buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: row;
+      width: 100%;
+      gap: 5px;
+
+      button {
+        width: 100%;
+      }
+
+      button:nth-child(2) {
+        aspect-ratio: 1/1;
+        width: auto !important;
+      }
+    }
+  }
+
   h3 {
     font-size: 25px;
     margin: 5px 0;
@@ -398,7 +431,7 @@ ul.chat {
   }
 
   .container.chat {
-    height: 230px;
+    height: 180px;
   }
 
 
