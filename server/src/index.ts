@@ -73,7 +73,7 @@ wss.on("connection", (ws: WebSocket) => {
           ws.send(JSON.stringify({ type: "error", message: "Room not found" }));
           return;
         }
-        if (!data.username || data.username.trim() == "") {
+        if (!data.username || data.username.toString().trim() == "") {
           ws.send(
             JSON.stringify({ type: "error", message: "No username provided" })
           );
@@ -124,7 +124,7 @@ wss.on("connection", (ws: WebSocket) => {
           text: `${data.username} joined the room`,
         });
       } else {
-        if (!data.username || data.username.trim() == "") {
+        if (!data.username || data.username.toString().trim() == "") {
           ws.send(
             JSON.stringify({ type: "error", message: "No username provided" })
           );
@@ -173,9 +173,9 @@ wss.on("connection", (ws: WebSocket) => {
       if (data.room && data.text) {
         const code: string = data.room;
         const room = rooms[code];
-        if(!room){
+        if (!room) {
           ws.send(JSON.stringify({ type: "error", message: "Room not found" }));
-          return; 
+          return;
         }
         const client = room.clients.find((client) => client.ws === ws);
         if (!client) {
@@ -569,7 +569,7 @@ const countChecked = (board: Cell[][]): number => {
 };
 
 const getTopThreePlayers = (room: Room): TopThree[] => {
-  const bingoPlayers = room.clients.filter(player => player.inGame)
+  const bingoPlayers = room.clients.filter((player) => player.inGame);
 
   bingoPlayers.forEach((player) => {
     if (!player.bingoTimestamp) {

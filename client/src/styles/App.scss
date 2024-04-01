@@ -21,7 +21,7 @@
   min-width: 200px;
   max-width: 700px;
   // width: clamp(200px, 500px, 700px);
-  gap: 25px;
+  gap: 10px;
   overflow-y: auto;
 
   h1 {
@@ -121,7 +121,7 @@
   padding: 20px;
 
   &.chat {
-    height: 270px;
+    height: 220px;
   }
 
   &.players {

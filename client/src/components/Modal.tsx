@@ -14,6 +14,14 @@ export default function Modal({
   setModalOpen,
 }: ModalProps) {
   const kickUser = () => {
+    console.log(
+      JSON.stringify({
+        type: "kick",
+        room: roomCode,
+        clientId: clientIdToKick,
+      })
+    );
+
     ws.send(
       JSON.stringify({
         type: "kick",

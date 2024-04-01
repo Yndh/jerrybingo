@@ -280,7 +280,7 @@ const App: React.FC = () => {
       {modalOpen && (
         <Modal
           ws={ws}
-          roomCode={roomCode}
+          roomCode={room}
           userToKick={userToKick}
           clientIdToKick={clientIdToKick}
           setModalOpen={setModalOpen}

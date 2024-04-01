@@ -125,11 +125,7 @@ export default function Lobby({
       />
 
       <div className="inputContainer">
-        {createdRoom && (
-          <button style={{ width: "100%", marginTop: 25 }} onClick={startGame}>
-            🎮 Start Game
-          </button>
-        )}
+        {createdRoom && <button onClick={startGame}>🎮 Start Game</button>}
 
         <button onClick={leaveRoom}>🚪 Leave Room</button>
       </div>
