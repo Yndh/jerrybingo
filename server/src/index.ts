@@ -34,7 +34,7 @@ interface TopThree {
   checkedCells: number;
 }
 
-const PORT: number = parseInt(process.env.port as string) || 8080;
+const PORT: number = parseInt(process.env.PORT as string) || 8080;
 
 const app = express();
 const server = http.createServer(app);

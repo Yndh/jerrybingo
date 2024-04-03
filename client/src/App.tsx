@@ -95,7 +95,6 @@ const App: React.FC = () => {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.table(data);
 
       if (data.type === "pong") {
         if (pongTimeoutRef.current !== null) {
