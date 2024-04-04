@@ -131,6 +131,7 @@ const App: React.FC = () => {
       } else if (data.type === "check") {
         setPlayerList(data.playerList);
       } else if (data.type === "gameEnded") {
+        console.table(data)
         setBoard([]);
         setBingo(false);
         setGameStarted(false);

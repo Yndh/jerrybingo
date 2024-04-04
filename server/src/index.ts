@@ -324,12 +324,12 @@ wss.on("connection", (ws: WebSocket) => {
           if (playersBingo) {
             room.gameStarted = false;
 
-            room.clients.map((client) => (client.inGame = false));
             sendToRoom(code, {
               type: "gameEnded",
               text: "",
               leaderboard: getTopThreePlayers(room),
             });
+            room.clients.map((client) => (client.inGame = false));
             room.clients.map((client) => (client.bingo = false));
           }
           return;
