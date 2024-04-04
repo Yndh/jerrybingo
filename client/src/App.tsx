@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import "./styles/App.scss";
 import { toast } from "react-toastify";
 import Confetti from "./components/Confetti";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Game from "./screens/Game";
 import Lobby from "./screens/Lobby";
 import Overview from "./screens/Overview";
@@ -41,7 +41,8 @@ interface TopThree {
 }
 
 const App: React.FC = () => {
-  let location = useLocation();
+  const location = useLocation();
+  const navigate = useNavigate()
 
   const [wsError, setWsError] = useState<string>("");
   const [connected, setConnected] = useState<boolean>(false);
@@ -117,6 +118,7 @@ const App: React.FC = () => {
         setRoom(data.roomCode);
         setMessages([]);
         setPlayerList(data.playerList);
+        navigate(`?gameCode=${data.roomCode}`)
       } else if (data.type === "gameStarted") {
         setBoard(data.board);
         setGameStarted(true);
@@ -138,6 +140,7 @@ const App: React.FC = () => {
         setModalOpen(false);
       } else if (data.type === "leave") {
         reset();
+        navigate("")
       } else if (data.type === "error") {
         toast.error(data.message);
         setMessages([]);
@@ -151,6 +154,7 @@ const App: React.FC = () => {
 
     const query = useQuery();
     const gameCode = query.get("gameCode");
+    
     if (gameCode) {
       toast.info(gameCode);
       setRoomCode(gameCode);
