@@ -331,6 +331,10 @@ wss.on("connection", (ws: WebSocket) => {
             });
             room.clients.map((client) => (client.inGame = false));
             room.clients.map((client) => (client.bingo = false));
+            sendToRoom(code, {
+              type: "message",
+              text: ""
+            })
           }
           return;
         }
@@ -382,6 +386,10 @@ wss.on("connection", (ws: WebSocket) => {
         });
         room.clients.map((client) => (client.inGame = false));
         room.clients.map((client) => (client.bingo = false));
+        sendToRoom(code, {
+          type: "message",
+          text: ""
+        })
       }
     } else if (data.type === "leave") {
       if (data.room) {

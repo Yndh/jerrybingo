@@ -96,6 +96,8 @@ const App: React.FC = () => {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      console.table(data)
+
 
       if (data.type === "pong") {
         if (pongTimeoutRef.current !== null) {
@@ -131,7 +133,6 @@ const App: React.FC = () => {
       } else if (data.type === "check") {
         setPlayerList(data.playerList);
       } else if (data.type === "gameEnded") {
-        console.table(data)
         setBoard([]);
         setBingo(false);
         setGameStarted(false);
