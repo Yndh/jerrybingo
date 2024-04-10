@@ -172,6 +172,7 @@
     overflow-y: scroll;
     padding: 0;
     margin: 0;
+    word-wrap: break-word;
 
     &.player li {
       cursor: pointer;
@@ -199,6 +200,8 @@
 
       .message {
         font-weight: 400;
+        width: 100%;
+        word-break: break-all;
       }
     }
   }
