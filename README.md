@@ -28,6 +28,11 @@ $ cd client
 $ npm install
 $ npm run dev
 ```
+.env
+```
+VITE_WS_URL = ws://{server_url}
+VITE_URL = {url}
+```
 
 ## Zdjęcia
 ![Zdjęcie Aplikacji](https://raw.githubusercontent.com/Yndh/jerrybingo/main/assets/jerrdleLobby.png)
