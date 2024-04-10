@@ -42,12 +42,10 @@ interface TopThree {
 
 const App: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const [wsError, setWsError] = useState<string>("");
   const [connected, setConnected] = useState<boolean>(false);
-  const pingIntervalRef = useRef<number | null>(null);
-  const pongTimeoutRef = useRef<number | null>(null);
 
   //Lobby
   const [username, setUsername] = useState<string>("");
@@ -77,33 +75,15 @@ const App: React.FC = () => {
   const [modalOpen, setModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    const pingHandler = () => {
-      ws.send(
-        JSON.stringify({
-          type: "ping",
-        })
-      );
-      pongTimeoutRef.current = setTimeout(() => {
-        ws.close();
-      }, 10000);
-    };
-
     ws.onopen = () => {
       setWsError("");
       setConnected(true);
-      pingIntervalRef.current = setInterval(pingHandler, 180000); // Send ping every 3min
     };
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.table(data)
 
-
-      if (data.type === "pong") {
-        if (pongTimeoutRef.current !== null) {
-          clearTimeout(pongTimeoutRef.current);
-        }
-      } else if (data.type === "message") {
+      if (data.type === "message") {
         setMessages((prevMessages) => [
           ...prevMessages,
           { username: data.username, text: data.text },
@@ -120,7 +100,7 @@ const App: React.FC = () => {
         setRoom(data.roomCode);
         setMessages([]);
         setPlayerList(data.playerList);
-        navigate(`?gameCode=${data.roomCode}`)
+        navigate(`?gameCode=${data.roomCode}`);
       } else if (data.type === "gameStarted") {
         setBoard(data.board);
         setGameStarted(true);
@@ -142,7 +122,7 @@ const App: React.FC = () => {
         setModalOpen(false);
       } else if (data.type === "leave") {
         reset();
-        navigate("")
+        navigate("");
       } else if (data.type === "error") {
         toast.error(data.message);
         setMessages([]);
@@ -156,17 +136,12 @@ const App: React.FC = () => {
 
     const query = useQuery();
     const gameCode = query.get("gameCode");
-    
+
     if (gameCode) {
       toast.info(gameCode);
       setRoomCode(gameCode);
       setJoiningRoom(true);
     }
-
-    return () => {
-      clearInterval(pingIntervalRef.current!);
-      clearTimeout(pongTimeoutRef.current!);
-    };
   }, []);
 
   const useQuery = () => {

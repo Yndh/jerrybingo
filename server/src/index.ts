@@ -46,6 +46,12 @@ const MAX_ROOM_CLIENTS = 13;
 const rooms: { [key: string]: Room } = {};
 
 wss.on("connection", (ws: WebSocket) => {
+  const pingInterval = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.ping();
+    }
+  }, 30000);
+
   ws.on("message", (msg: WebSocket.Data) => {
     const data: {
       type: string;
@@ -333,8 +339,8 @@ wss.on("connection", (ws: WebSocket) => {
             room.clients.map((client) => (client.bingo = false));
             sendToRoom(code, {
               type: "message",
-              text: ""
-            })
+              text: "",
+            });
           }
           return;
         }
@@ -388,8 +394,8 @@ wss.on("connection", (ws: WebSocket) => {
         room.clients.map((client) => (client.bingo = false));
         sendToRoom(code, {
           type: "message",
-          text: ""
-        })
+          text: "",
+        });
       }
     } else if (data.type === "leave") {
       if (data.room) {
@@ -470,6 +476,7 @@ wss.on("connection", (ws: WebSocket) => {
 
   ws.on("close", () => {
     removeUser(ws);
+    clearInterval(pingInterval);
   });
 });
 
